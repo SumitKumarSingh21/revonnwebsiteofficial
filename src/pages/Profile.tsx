@@ -52,7 +52,8 @@ interface Booking {
 interface FollowerData {
   follower_id: string;
   following_id: string;
-  profiles: UserProfile;
+  follower_profile?: UserProfile;
+  following_profile?: UserProfile;
 }
 
 const Profile = () => {
@@ -128,37 +129,53 @@ const Profile = () => {
         setBookings(bookingsData || []);
       }
 
-      // Load followers and following
+      // Load followers - get follower profiles
       const { data: followersData } = await supabase
         .from('followers')
-        .select(`
-          follower_id,
-          following_id,
-          profiles!followers_follower_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('follower_id, following_id')
         .eq('following_id', profileId);
 
+      if (followersData) {
+        const followersWithProfiles = await Promise.all(
+          followersData.map(async (follow) => {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', follow.follower_id)
+              .single();
+            
+            return {
+              ...follow,
+              follower_profile: profileData
+            };
+          })
+        );
+        setFollowers(followersWithProfiles);
+      }
+
+      // Load following - get following profiles
       const { data: followingData } = await supabase
         .from('followers')
-        .select(`
-          follower_id,
-          following_id,
-          profiles!followers_following_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('follower_id, following_id')
         .eq('follower_id', profileId);
 
-      setFollowers(followersData || []);
-      setFollowing(followingData || []);
+      if (followingData) {
+        const followingWithProfiles = await Promise.all(
+          followingData.map(async (follow) => {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', follow.following_id)
+              .single();
+            
+            return {
+              ...follow,
+              following_profile: profileData
+            };
+          })
+        );
+        setFollowing(followingWithProfiles);
+      }
 
       // Check if current user is following this profile
       if (!isOwnProfile && user) {
@@ -329,18 +346,18 @@ const Profile = () => {
                         {following.map((follow) => (
                           <div key={follow.following_id} className="flex items-center space-x-3">
                             <Avatar className="w-10 h-10">
-                              {follow.profiles.avatar_url && <AvatarImage src={follow.profiles.avatar_url} />}
-                              <AvatarFallback>{follow.profiles.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                              {follow.following_profile?.avatar_url && <AvatarImage src={follow.following_profile.avatar_url} />}
+                              <AvatarFallback>{follow.following_profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <Link 
-                                to={`/profile/${follow.profiles.username}`}
+                                to={`/profile/${follow.following_profile?.username}`}
                                 className="font-semibold hover:underline"
                                 onClick={() => setFollowingDialogOpen(false)}
                               >
-                                {follow.profiles.full_name}
+                                {follow.following_profile?.full_name}
                               </Link>
-                              <p className="text-sm text-gray-500">@{follow.profiles.username}</p>
+                              <p className="text-sm text-gray-500">@{follow.following_profile?.username}</p>
                             </div>
                           </div>
                         ))}
@@ -367,18 +384,18 @@ const Profile = () => {
                         {followers.map((follower) => (
                           <div key={follower.follower_id} className="flex items-center space-x-3">
                             <Avatar className="w-10 h-10">
-                              {follower.profiles.avatar_url && <AvatarImage src={follower.profiles.avatar_url} />}
-                              <AvatarFallback>{follower.profiles.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                              {follower.follower_profile?.avatar_url && <AvatarImage src={follower.follower_profile.avatar_url} />}
+                              <AvatarFallback>{follower.follower_profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1">
                               <Link 
-                                to={`/profile/${follower.profiles.username}`}
+                                to={`/profile/${follower.follower_profile?.username}`}
                                 className="font-semibold hover:underline"
                                 onClick={() => setFollowersDialogOpen(false)}
                               >
-                                {follower.profiles.full_name}
+                                {follower.follower_profile?.full_name}
                               </Link>
-                              <p className="text-sm text-gray-500">@{follower.profiles.username}</p>
+                              <p className="text-sm text-gray-500">@{follower.follower_profile?.username}</p>
                             </div>
                           </div>
                         ))}

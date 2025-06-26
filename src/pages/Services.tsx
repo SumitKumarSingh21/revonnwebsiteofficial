@@ -9,16 +9,6 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-interface Garage {
-  id: string;
-  name: string;
-  location: string;
-  average_rating: number;
-  total_reviews: number;
-  image_url?: string;
-  services?: Service[];
-}
-
 interface Service {
   id: string;
   name: string;
@@ -27,6 +17,16 @@ interface Service {
   garage_id: string;
   category: string;
   duration?: number;
+}
+
+interface Garage {
+  id: string;
+  name: string;
+  location: string;
+  average_rating: number;
+  total_reviews: number;
+  image_url?: string;
+  services?: Service[];
 }
 
 const Services = () => {
@@ -63,7 +63,19 @@ const Services = () => {
       if (error) throw error;
 
       console.log('Fetched garages with services:', garagesWithServices);
-      setGarages(garagesWithServices || []);
+      
+      // Transform the data to match our interface
+      const transformedGarages = garagesWithServices?.map(garage => ({
+        id: garage.id,
+        name: garage.name,
+        location: garage.location || '',
+        average_rating: garage.average_rating || 0,
+        total_reviews: garage.total_reviews || 0,
+        image_url: garage.image_url,
+        services: Array.isArray(garage.services) ? garage.services : []
+      })) || [];
+
+      setGarages(transformedGarages);
     } catch (error: any) {
       console.error('Error fetching garages:', error);
       toast({
