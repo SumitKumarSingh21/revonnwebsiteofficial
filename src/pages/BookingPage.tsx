@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, Car, FileText, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -10,13 +10,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  category?: string;
+  duration?: number;
+}
+
+interface Garage {
+  id: string;
+  name: string;
+  location: string;
+}
 
 const BookingPage = () => {
   const { garageId } = useParams();
   const navigate = useNavigate();
   
+  const [garage, setGarage] = useState<Garage | null>(null);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const [formData, setFormData] = useState({
-    garageName: 'AutoCare Hub', // This would be auto-filled based on garageId
+    garageName: '',
     carBrand: '',
     carModel: '',
     serviceDate: '',
@@ -35,19 +54,59 @@ const BookingPage = () => {
     'Toyota': ['Innova', 'Fortuner', 'Yaris', 'Glanza', 'Urban Cruiser']
   };
 
-  const availableServices = [
-    { id: 'oil-change', name: 'Oil Change', price: 1500 },
-    { id: 'brake-service', name: 'Brake Service', price: 2500 },
-    { id: 'ac-repair', name: 'AC Repair', price: 3000 },
-    { id: 'car-wash', name: 'Car Wash', price: 500 },
-    { id: 'tire-service', name: 'Tire Service', price: 2000 },
-    { id: 'engine-diagnostic', name: 'Engine Diagnostic', price: 1000 }
-  ];
-
   const timeSlots = [
     '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
     '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
   ];
+
+  useEffect(() => {
+    if (garageId) {
+      fetchGarageAndServices();
+    }
+  }, [garageId]);
+
+  const fetchGarageAndServices = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch garage details
+      const { data: garageData, error: garageError } = await supabase
+        .from('garages')
+        .select('id, name, location')
+        .eq('id', garageId)
+        .single();
+
+      if (garageError) throw garageError;
+
+      // Fetch services for this garage
+      const { data: servicesData, error: servicesError } = await supabase
+        .from('services')
+        .select('id, name, price, category, duration')
+        .eq('garage_id', garageId);
+
+      if (servicesError) throw servicesError;
+
+      console.log('Fetched garage:', garageData);
+      console.log('Fetched services:', servicesData);
+
+      setGarage(garageData);
+      setAvailableServices(servicesData || []);
+      setFormData(prev => ({
+        ...prev,
+        garageName: garageData.name
+      }));
+
+    } catch (error: any) {
+      console.error('Error fetching garage and services:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load garage information",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleServiceChange = (serviceId, checked) => {
     if (checked) {
@@ -102,6 +161,28 @@ const BookingPage = () => {
 
     navigate('/profile');
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!garage) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold mb-2">Garage not found</h2>
+          <p className="text-gray-500 mb-4">The garage you're looking for doesn't exist.</p>
+          <Button asChild>
+            <Link to="/services">Back to Services</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -227,23 +308,33 @@ const BookingPage = () => {
                   <CardTitle>Select Services *</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {availableServices.map(service => (
-                      <div key={service.id} className="flex items-center space-x-2 p-3 border rounded-lg">
-                        <Checkbox
-                          id={service.id}
-                          checked={formData.services.includes(service.id)}
-                          onCheckedChange={(checked) => handleServiceChange(service.id, checked)}
-                        />
-                        <div className="flex-1">
-                          <Label htmlFor={service.id} className="cursor-pointer">
-                            {service.name}
-                          </Label>
-                          <p className="text-sm text-gray-500">₹{service.price}</p>
+                  {availableServices.length === 0 ? (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">No services available for this garage.</p>
+                      <p className="text-sm text-gray-400 mt-2">Please contact the garage directly.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {availableServices.map(service => (
+                        <div key={service.id} className="flex items-center space-x-2 p-3 border rounded-lg">
+                          <Checkbox
+                            id={service.id}
+                            checked={formData.services.includes(service.id)}
+                            onCheckedChange={(checked) => handleServiceChange(service.id, checked)}
+                          />
+                          <div className="flex-1">
+                            <Label htmlFor={service.id} className="cursor-pointer">
+                              {service.name}
+                            </Label>
+                            <p className="text-sm text-gray-500">₹{service.price}</p>
+                            {service.category && (
+                              <p className="text-xs text-gray-400">{service.category}</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -353,7 +444,12 @@ const BookingPage = () => {
                     </div>
                   </div>
 
-                  <Button type="submit" className="w-full" size="lg">
+                  <Button 
+                    type="submit" 
+                    className="w-full" 
+                    size="lg"
+                    disabled={availableServices.length === 0}
+                  >
                     <CreditCard className="h-4 w-4 mr-2" />
                     Confirm Booking
                   </Button>
