@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Lock, Eye, MessageSquare, Bell, Link2, AlertTriangle, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,10 +40,18 @@ const Settings = () => {
     google: true
   });
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Load saved profile data on component mount
+  useEffect(() => {
+    const savedProfile = localStorage.getItem('userProfile');
+    if (savedProfile) {
+      setProfile(JSON.parse(savedProfile));
+    }
+  }, []);
 
   const handleProfileUpdate = () => {
-    // In a real app, this would update the backend
+    // Save profile to localStorage
+    localStorage.setItem('userProfile', JSON.stringify(profile));
+    
     toast({
       title: "Profile Updated",
       description: "Your profile has been updated successfully.",
@@ -83,6 +90,12 @@ const Settings = () => {
   };
 
   const handleDelete = () => {
+    // Clear all user data
+    localStorage.removeItem('userProfile');
+    localStorage.removeItem('communityPosts');
+    localStorage.removeItem('savedPosts');
+    localStorage.removeItem('bookings');
+    
     toast({
       title: "Account Deleted",
       description: "Your account and all data have been permanently deleted.",
@@ -100,7 +113,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -404,7 +417,7 @@ const Settings = () => {
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                    <Button variant="outline">
                       Cancel
                     </Button>
                     <Button variant="destructive" onClick={handleDelete}>

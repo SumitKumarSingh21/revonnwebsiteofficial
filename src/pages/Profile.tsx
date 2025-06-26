@@ -12,6 +12,7 @@ const Profile = () => {
   const { username } = useParams();
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
+  const [savedPosts, setSavedPosts] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [isOwnProfile, setIsOwnProfile] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -20,6 +21,10 @@ const Profile = () => {
   const currentUser = { id: 1, username: 'currentuser', name: 'Current User' };
 
   useEffect(() => {
+    // Load profile data from localStorage
+    const savedProfile = localStorage.getItem('userProfile');
+    const profileData = savedProfile ? JSON.parse(savedProfile) : null;
+    
     // Determine if this is the current user's profile
     const profileUsername = username || currentUser.username;
     const isOwn = !username || username === currentUser.username;
@@ -30,9 +35,10 @@ const Profile = () => {
       setUser({
         id: 1,
         username: 'currentuser',
-        name: 'Current User',
-        bio: 'Car enthusiast from Ranchi. Love sharing car care tips and experiences!',
-        location: 'Ranchi, Jharkhand',
+        name: profileData?.name || 'Current User',
+        bio: profileData?.bio || 'Car enthusiast from Ranchi. Love sharing car care tips and experiences!',
+        location: profileData?.location || 'Ranchi, Jharkhand',
+        email: profileData?.email || 'user@example.com',
         joinDate: 'Joined December 2023',
         followers: 142,
         following: 87,
@@ -61,6 +67,15 @@ const Profile = () => {
     );
     setPosts(userPosts);
 
+    // Load saved posts if it's own profile
+    if (isOwn) {
+      const userSavedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
+      const savedPostsData = savedPosts.filter(post => 
+        userSavedPosts.includes(post.id)
+      );
+      setSavedPosts(savedPostsData);
+    }
+
     // Load bookings if it's own profile
     if (isOwn) {
       const savedBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
@@ -76,12 +91,108 @@ const Profile = () => {
     }));
   };
 
+  const handlePostInteraction = (postId, action) => {
+    const updatePosts = (postsList) => {
+      return postsList.map(post => {
+        if (post.id === postId) {
+          switch (action) {
+            case 'like':
+              return {
+                ...post,
+                isLiked: !post.isLiked,
+                likes: post.isLiked ? post.likes - 1 : post.likes + 1
+              };
+            case 'comment':
+              return { ...post, comments: post.comments + 1 };
+            case 'repost':
+              return { ...post, reposts: post.reposts + 1 };
+            default:
+              return post;
+          }
+        }
+        return post;
+      });
+    };
+
+    // Update posts
+    setPosts(updatePosts);
+    setSavedPosts(updatePosts);
+    
+    // Update in localStorage
+    const allPosts = JSON.parse(localStorage.getItem('communityPosts') || '[]');
+    const updatedAllPosts = updatePosts(allPosts);
+    localStorage.setItem('communityPosts', JSON.stringify(updatedAllPosts));
+  };
+
   if (!user) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>;
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">Loading...</div>;
   }
 
+  const renderPost = (post) => (
+    <Card key={post.id} className="hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex space-x-3">
+          <Avatar>
+            <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1">
+            <div className="flex items-center space-x-2">
+              <Link to={`/profile/${post.user.username}`} className="font-semibold hover:underline">
+                {post.user.name}
+              </Link>
+              <span className="text-gray-500">@{post.user.username}</span>
+              <span className="text-gray-400">·</span>
+              <span className="text-gray-500 text-sm">{post.timestamp}</span>
+            </div>
+            
+            <div className="mt-2">
+              <p className="text-gray-900 whitespace-pre-wrap">{post.content}</p>
+              {post.image && (
+                <img src={post.image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
+              )}
+            </div>
+            
+            <div className="flex items-center justify-between mt-4 max-w-md">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-500 hover:text-blue-600"
+                onClick={() => handlePostInteraction(post.id, 'comment')}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                {post.comments}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-500 hover:text-green-600"
+                onClick={() => handlePostInteraction(post.id, 'repost')}
+              >
+                <Repeat2 className="h-4 w-4 mr-2" />
+                {post.reposts}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className={post.isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'}
+                onClick={() => handlePostInteraction(post.id, 'like')}
+              >
+                <Heart className={`h-4 w-4 mr-2 ${post.isLiked ? 'fill-current' : ''}`} />
+                {post.likes}
+              </Button>
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
+                <Share className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -163,59 +274,16 @@ const Profile = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="posts">Posts</TabsTrigger>
-            {isOwnProfile && <TabsTrigger value="bookings">My Bookings</TabsTrigger>}
+            {isOwnProfile && <TabsTrigger value="saved">Saved</TabsTrigger>}
+            {isOwnProfile && <TabsTrigger value="bookings">Bookings</TabsTrigger>}
             {!isOwnProfile && <TabsTrigger value="media">Media</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="posts" className="space-y-4 mt-6">
             {posts.length > 0 ? (
-              posts.map((post) => (
-                <Card key={post.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex space-x-3">
-                      <Avatar>
-                        <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-semibold">{post.user.name}</span>
-                          <span className="text-gray-500">@{post.user.username}</span>
-                          <span className="text-gray-400">·</span>
-                          <span className="text-gray-500 text-sm">{post.timestamp}</span>
-                        </div>
-                        
-                        <div className="mt-2">
-                          <p className="text-gray-900 whitespace-pre-wrap">{post.content}</p>
-                          {post.image && (
-                            <img src={post.image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center justify-between mt-4 max-w-md">
-                          <Button variant="ghost" size="sm" className="text-gray-500">
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            {post.comments}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-gray-500">
-                            <Repeat2 className="h-4 w-4 mr-2" />
-                            {post.reposts}
-                          </Button>
-                          <Button variant="ghost" size="sm" className={post.isLiked ? 'text-red-600' : 'text-gray-500'}>
-                            <Heart className={`h-4 w-4 mr-2 ${post.isLiked ? 'fill-current' : ''}`} />
-                            {post.likes}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-gray-500">
-                            <Share className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+              posts.map(renderPost)
             ) : (
               <div className="text-center py-12">
                 <p className="text-gray-500">No posts yet</p>
@@ -227,6 +295,21 @@ const Profile = () => {
               </div>
             )}
           </TabsContent>
+
+          {isOwnProfile && (
+            <TabsContent value="saved" className="space-y-4 mt-6">
+              {savedPosts.length > 0 ? (
+                savedPosts.map(renderPost)
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No saved posts yet</p>
+                  <Button className="mt-4" asChild>
+                    <Link to="/community">Explore posts to save</Link>
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          )}
           
           {isOwnProfile && (
             <TabsContent value="bookings" className="space-y-4 mt-6">
