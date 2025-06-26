@@ -10,152 +10,175 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+
+interface Post {
+  id: string;
+  caption: string;
+  post_image?: string;
+  likes: number;
+  comments: number;
+  username: string;
+  user_image?: string;
+  user_id: string;
+  created_at: string;
+}
+
+interface Profile {
+  id: string;
+  username: string;
+  full_name: string;
+  avatar_url?: string;
+}
 
 const Community = () => {
-  const [posts, setPosts] = useState([]);
+  const { user } = useAuth();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [newPost, setNewPost] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredPosts, setFilteredPosts] = useState([]);
-
-  const currentUser = { id: 1, name: 'Current User', username: 'currentuser' };
-
-  const samplePosts = [
-    {
-      id: 1,
-      user: { id: 2, name: 'Car Enthusiast', username: 'carEnthusiast' },
-      content: 'Just got my car serviced at AutoCare Hub. Excellent service and transparent pricing! Highly recommend them for brake service.',
-      timestamp: '2h ago',
-      likes: 12,
-      comments: 3,
-      reposts: 1,
-      isLiked: false,
-      image: null
-    },
-    {
-      id: 2,
-      user: { id: 3, name: 'Speed Demon', username: 'speedDemon' },
-      content: 'Looking for recommendations for performance modifications in Ranchi. Any suggestions for trusted garages? @carEnthusiast',
-      timestamp: '4h ago',
-      likes: 8,
-      comments: 5,
-      reposts: 2,
-      isLiked: true,
-      image: null
-    },
-    {
-      id: 3,
-      user: { id: 4, name: 'Professional Mechanic', username: 'mechanic_pro' },
-      content: 'Pro tip: Always check your oil level monthly. Regular maintenance saves thousands in repair costs!',
-      timestamp: '1d ago',
-      likes: 25,
-      comments: 8,
-      reposts: 6,
-      isLiked: false,
-      image: null
-    }
-  ];
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const savedPosts = localStorage.getItem('communityPosts');
-    if (savedPosts) {
-      setPosts(JSON.parse(savedPosts));
-    } else {
-      setPosts(samplePosts);
-      localStorage.setItem('communityPosts', JSON.stringify(samplePosts));
+    if (user) {
+      fetchPosts();
+      fetchProfiles();
     }
-  }, []);
+  }, [user]);
 
-  useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredPosts(posts);
-    } else {
-      const filtered = posts.filter(post => 
-        post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.user.username.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredPosts(filtered);
-    }
-  }, [searchQuery, posts]);
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  const handleCreatePost = () => {
-    if (newPost.trim() === '') return;
-
-    const post = {
-      id: Date.now(),
-      user: currentUser,
-      content: newPost,
-      timestamp: 'now',
-      likes: 0,
-      comments: 0,
-      reposts: 0,
-      isLiked: false,
-      image: selectedImage
-    };
-
-    const updatedPosts = [post, ...posts];
-    setPosts(updatedPosts);
-    localStorage.setItem('communityPosts', JSON.stringify(updatedPosts));
-    
-    setNewPost('');
-    setSelectedImage(null);
-    setShowNewPostDialog(false);
-    
-    toast({
-      title: "Post Created",
-      description: "Your post has been shared with the community.",
-    });
-  };
-
-  const handlePostInteraction = (postId, action) => {
-    const updatedPosts = posts.map(post => {
-      if (post.id === postId) {
-        switch (action) {
-          case 'like':
-            return {
-              ...post,
-              isLiked: !post.isLiked,
-              likes: post.isLiked ? post.likes - 1 : post.likes + 1
-            };
-          case 'comment':
-            return { ...post, comments: post.comments + 1 };
-          case 'repost':
-            return { ...post, reposts: post.reposts + 1 };
-          default:
-            return post;
-        }
-      }
-      return post;
-    });
-
-    setPosts(updatedPosts);
-    localStorage.setItem('communityPosts', JSON.stringify(updatedPosts));
-  };
-
-  const handleSavePost = (postId) => {
-    const savedPosts = JSON.parse(localStorage.getItem('savedPosts') || '[]');
-    if (!savedPosts.includes(postId)) {
-      savedPosts.push(postId);
-      localStorage.setItem('savedPosts', JSON.stringify(savedPosts));
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error: any) {
       toast({
-        title: "Post Saved",
-        description: "Post has been saved to your profile.",
+        title: "Error",
+        description: "Failed to load posts",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProfiles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (error) throw error;
+      setProfiles(data || []);
+    } catch (error: any) {
+      console.error('Error fetching profiles:', error);
+    }
+  };
+
+  const handleCreatePost = async () => {
+    if (!newPost.trim() || !user) return;
+
+    try {
+      const userProfile = profiles.find(p => p.id === user.id);
+      
+      const { error } = await supabase
+        .from('posts')
+        .insert({
+          caption: newPost,
+          post_image: selectedImage,
+          user_id: user.id,
+          username: userProfile?.username || user.email?.split('@')[0] || 'User',
+          user_image: userProfile?.avatar_url,
+          likes: 0,
+          comments: 0
+        });
+
+      if (error) throw error;
+
+      setNewPost('');
+      setSelectedImage(null);
+      setShowNewPostDialog(false);
+      fetchPosts();
+      
+      toast({
+        title: "Post Created",
+        description: "Your post has been shared with the community.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to create post",
+        variant: "destructive",
       });
     }
   };
 
-  const handleImageUpload = (event) => {
-    const file = event.target.files[0];
+  const handlePostInteraction = async (postId: string, action: 'like' | 'comment') => {
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      const updateData = action === 'like' 
+        ? { likes: post.likes + 1 }
+        : { comments: post.comments + 1 };
+
+      const { error } = await supabase
+        .from('posts')
+        .update(updateData)
+        .eq('id', postId);
+
+      if (error) throw error;
+
+      setPosts(posts.map(p => 
+        p.id === postId 
+          ? { ...p, ...updateData }
+          : p
+      ));
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update post",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setSelectedImage(e.target.result);
+        setSelectedImage(e.target?.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
+
+  const filteredContent = searchQuery.trim() === '' ? posts : [
+    ...posts.filter(post => 
+      post.caption.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.username.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+    ...profiles.filter(profile =>
+      profile.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    ).map(profile => ({ ...profile, type: 'profile' }))
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
@@ -184,7 +207,7 @@ const Community = () => {
                   <div className="space-y-4">
                     <div className="flex items-start space-x-3">
                       <Avatar>
-                        <AvatarFallback>{currentUser.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <Textarea
@@ -255,94 +278,110 @@ const Community = () => {
 
       {/* Posts Feed */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {filteredPosts.length > 0 ? (
+        {filteredContent.length > 0 ? (
           <div className="space-y-4">
-            {filteredPosts.map((post) => (
-              <Card key={post.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex space-x-3">
-                    <Avatar>
-                      <AvatarFallback>{post.user.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Link to={`/profile/${post.user.username}`} className="font-semibold hover:underline">
-                            {post.user.name}
-                          </Link>
-                          <span className="text-gray-500">@{post.user.username}</span>
-                          <span className="text-gray-400">·</span>
-                          <span className="text-gray-500 text-sm">{post.timestamp}</span>
+            {filteredContent.map((item: any) => (
+              item.type === 'profile' ? (
+                <Card key={`profile-${item.id}`} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <Link to={`/profile/${item.username}`} className="flex items-center space-x-3">
+                      <Avatar>
+                        <AvatarFallback>{item.full_name?.charAt(0) || item.username?.charAt(0) || 'U'}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-semibold">{item.full_name || item.username}</p>
+                        <p className="text-gray-500">@{item.username}</p>
+                      </div>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card key={item.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex space-x-3">
+                      <Avatar>
+                        <AvatarFallback>{item.username.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <Link to={`/profile/${item.username}`} className="font-semibold hover:underline">
+                              {item.username}
+                            </Link>
+                            <span className="text-gray-400">·</span>
+                            <span className="text-gray-500 text-sm">
+                              {new Date(item.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Bookmark className="h-4 w-4 mr-2" />
+                                Save Post
+                              </DropdownMenuItem>
+                              <DropdownMenuItem>
+                                <Share className="h-4 w-4 mr-2" />
+                                Copy Link
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleSavePost(post.id)}>
-                              <Bookmark className="h-4 w-4 mr-2" />
-                              Save Post
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Share className="h-4 w-4 mr-2" />
-                              Copy Link
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      
-                      <div className="mt-2">
-                        <p className="text-gray-900 whitespace-pre-wrap">{post.content}</p>
-                        {post.image && (
-                          <img src={post.image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-between mt-4 max-w-md">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-gray-500 hover:text-blue-600"
-                          onClick={() => handlePostInteraction(post.id, 'comment')}
-                        >
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          {post.comments}
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-gray-500 hover:text-green-600"
-                          onClick={() => handlePostInteraction(post.id, 'repost')}
-                        >
-                          <Repeat2 className="h-4 w-4 mr-2" />
-                          {post.reposts}
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className={post.isLiked ? 'text-red-600' : 'text-gray-500 hover:text-red-600'}
-                          onClick={() => handlePostInteraction(post.id, 'like')}
-                        >
-                          <Heart className={`h-4 w-4 mr-2 ${post.isLiked ? 'fill-current' : ''}`} />
-                          {post.likes}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
-                          <Share className="h-4 w-4" />
-                        </Button>
+                        
+                        <div className="mt-2">
+                          <p className="text-gray-900 whitespace-pre-wrap">{item.caption}</p>
+                          {item.post_image && (
+                            <img src={item.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center justify-between mt-4 max-w-md">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-gray-500 hover:text-blue-600"
+                            onClick={() => handlePostInteraction(item.id, 'comment')}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-2" />
+                            {item.comments}
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-gray-500 hover:text-green-600"
+                          >
+                            <Repeat2 className="h-4 w-4 mr-2" />
+                            0
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="text-gray-500 hover:text-red-600"
+                            onClick={() => handlePostInteraction(item.id, 'like')}
+                          >
+                            <Heart className="h-4 w-4 mr-2" />
+                            {item.likes}
+                          </Button>
+                          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
+                            <Share className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )
             ))}
           </div>
         ) : (
           <div className="text-center py-12">
             <p className="text-gray-500">
-              {searchQuery ? 'No posts found matching your search.' : 'No posts yet. Be the first to share!'}
+              {searchQuery ? 'No posts or users found matching your search.' : 'No posts yet. Be the first to share!'}
             </p>
           </div>
         )}
