@@ -15,8 +15,8 @@ interface Garage {
   location: string;
   average_rating: number;
   total_reviews: number;
-  services: string[];
   image_url?: string;
+  services?: Service[];
 }
 
 interface Service {
@@ -26,11 +26,11 @@ interface Service {
   price: number;
   garage_id: string;
   category: string;
+  duration?: number;
 }
 
 const Services = () => {
   const [garages, setGarages] = useState<Garage[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showMoreNearby, setShowMoreNearby] = useState(false);
@@ -43,26 +43,29 @@ const Services = () => {
     try {
       setLoading(true);
       
-      // Fetch garages
-      const { data: garagesData, error: garagesError } = await supabase
+      // Fetch garages with their services in a single query
+      const { data: garagesWithServices, error } = await supabase
         .from('garages')
-        .select('*')
+        .select(`
+          *,
+          services (
+            id,
+            name,
+            description,
+            price,
+            category,
+            duration
+          )
+        `)
         .eq('status', 'active')
         .order('average_rating', { ascending: false });
 
-      if (garagesError) throw garagesError;
+      if (error) throw error;
 
-      // Fetch services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .order('name');
-
-      if (servicesError) throw servicesError;
-
-      setGarages(garagesData || []);
-      setServices(servicesData || []);
+      console.log('Fetched garages with services:', garagesWithServices);
+      setGarages(garagesWithServices || []);
     } catch (error: any) {
+      console.error('Error fetching garages:', error);
       toast({
         title: "Error",
         description: "Failed to load garages and services",
@@ -75,10 +78,11 @@ const Services = () => {
 
   const filteredGarages = garages.filter(garage =>
     garage.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    garage.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (garage.services && garage.services.some(service => 
-      service.toLowerCase().includes(searchQuery.toLowerCase())
-    ))
+    garage.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    garage.services?.some(service => 
+      service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      service.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   const displayedGarages = showMoreNearby ? filteredGarages : filteredGarages.slice(0, 6);
@@ -210,20 +214,20 @@ const GarageCard = ({ garage }: { garage: Garage }) => {
         <div className="flex flex-wrap gap-1 mb-4">
           {garage.services && garage.services.length > 0 ? (
             <>
-              {garage.services.slice(0, 2).map((service, index) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {service}
+              {garage.services.slice(0, 2).map((service) => (
+                <Badge key={service.id} variant="secondary" className="text-xs">
+                  {service.name} - ₹{service.price}
                 </Badge>
               ))}
               {garage.services.length > 2 && (
                 <Badge variant="outline" className="text-xs">
-                  +{garage.services.length - 2} more
+                  +{garage.services.length - 2} more services
                 </Badge>
               )}
             </>
           ) : (
             <Badge variant="outline" className="text-xs">
-              Services available
+              No services available
             </Badge>
           )}
         </div>
