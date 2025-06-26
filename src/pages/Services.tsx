@@ -71,7 +71,7 @@ const Services = () => {
         average_rating: garage.average_rating || 0,
         total_reviews: garage.total_reviews || 0,
         image_url: garage.image_url,
-        services: Array.isArray(garage.services) ? garage.services.map(service => ({
+        services: garage.services ? garage.services.map((service: any) => ({
           id: service.id,
           name: service.name,
           description: service.description,
