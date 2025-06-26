@@ -25,7 +25,7 @@ interface Garage {
   average_rating: number;
   total_reviews: number;
   image_url?: string;
-  services?: Service[];
+  services: Service[];
 }
 
 const Services = () => {
@@ -71,7 +71,15 @@ const Services = () => {
         average_rating: garage.average_rating || 0,
         total_reviews: garage.total_reviews || 0,
         image_url: garage.image_url,
-        services: Array.isArray(garage.services) ? garage.services : []
+        services: Array.isArray(garage.services) ? garage.services.map(service => ({
+          id: service.id,
+          name: service.name,
+          description: service.description,
+          price: service.price,
+          garage_id: garage.id,
+          category: service.category,
+          duration: service.duration
+        })) : []
       })) || [];
 
       setGarages(transformedGarages);
