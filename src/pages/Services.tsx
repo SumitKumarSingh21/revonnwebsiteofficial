@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star, Clock, ChevronRight, ArrowLeft, Search } from 'lucide-react';
@@ -65,7 +64,7 @@ const Services = () => {
       console.log('Fetched garages with services:', garagesWithServices);
       
       // Transform the data to match our interface
-      const transformedGarages = garagesWithServices?.map(garage => ({
+      const transformedGarages: Garage[] = garagesWithServices?.map(garage => ({
         id: garage.id,
         name: garage.name,
         location: garage.location || '',
