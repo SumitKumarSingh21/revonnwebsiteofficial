@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Clock, Car, FileText, CreditCard } from 'lucide-react';
@@ -11,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Service {
   id: string;
@@ -29,10 +29,12 @@ interface Garage {
 const BookingPage = () => {
   const { garageId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
   const [garage, setGarage] = useState<Garage | null>(null);
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   
   const [formData, setFormData] = useState({
     garageName: '',
@@ -129,8 +131,17 @@ const BookingPage = () => {
     }, 0);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to book a service.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     if (!formData.carBrand || !formData.carModel || !formData.serviceDate || !formData.serviceTime || formData.services.length === 0) {
       toast({
@@ -141,25 +152,57 @@ const BookingPage = () => {
       return;
     }
 
-    // Simulate booking creation
-    const booking = {
-      id: Date.now(),
-      ...formData,
-      totalCost: calculateTotal(),
-      status: 'confirmed',
-      createdAt: new Date().toISOString()
-    };
+    try {
+      setSubmitting(true);
 
-    // In a real app, this would be stored in your database
-    const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-    localStorage.setItem('bookings', JSON.stringify([...existingBookings, booking]));
+      // Get the first selected service for the booking
+      const primaryServiceId = formData.services[0];
+      
+      // Create booking in Supabase
+      const { data: bookingData, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          garage_id: garageId,
+          service_id: primaryServiceId,
+          booking_date: formData.serviceDate,
+          booking_time: formData.serviceTime,
+          vehicle_make: formData.carBrand,
+          vehicle_model: formData.carModel,
+          total_amount: calculateTotal(),
+          notes: formData.notes || null,
+          customer_name: user.email?.split('@')[0] || 'Customer',
+          customer_email: user.email || '',
+          payment_method: formData.paymentOption,
+          status: 'confirmed'
+        })
+        .select()
+        .single();
 
-    toast({
-      title: "Booking Confirmed!",
-      description: `Your booking at ${formData.garageName} has been confirmed for ${formData.serviceDate}.`,
-    });
+      if (bookingError) {
+        console.error('Booking error:', bookingError);
+        throw bookingError;
+      }
 
-    navigate('/profile');
+      console.log('Booking created successfully:', bookingData);
+
+      toast({
+        title: "Booking Confirmed!",
+        description: `Your booking at ${formData.garageName} has been confirmed for ${formData.serviceDate}.`,
+      });
+
+      // Navigate to profile to see the booking
+      navigate('/profile');
+    } catch (error: any) {
+      console.error('Error creating booking:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create booking. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -185,7 +228,7 @@ const BookingPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       {/* Header */}
       <div className="bg-white shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -207,7 +250,6 @@ const BookingPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Form */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Garage Info */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -228,7 +270,6 @@ const BookingPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Car Details */}
               <Card>
                 <CardHeader>
                   <CardTitle>Car Details</CardTitle>
@@ -265,7 +306,6 @@ const BookingPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Date & Time */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -302,7 +342,6 @@ const BookingPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Services */}
               <Card>
                 <CardHeader>
                   <CardTitle>Select Services *</CardTitle>
@@ -338,7 +377,6 @@ const BookingPage = () => {
                 </CardContent>
               </Card>
 
-              {/* Additional Notes */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -415,7 +453,6 @@ const BookingPage = () => {
                     </>
                   )}
 
-                  {/* Payment Options */}
                   <div className="space-y-3">
                     <Label>Payment Option</Label>
                     <div className="space-y-2">
@@ -448,10 +485,10 @@ const BookingPage = () => {
                     type="submit" 
                     className="w-full" 
                     size="lg"
-                    disabled={availableServices.length === 0}
+                    disabled={availableServices.length === 0 || submitting}
                   >
                     <CreditCard className="h-4 w-4 mr-2" />
-                    Confirm Booking
+                    {submitting ? 'Confirming...' : 'Confirm Booking'}
                   </Button>
                 </CardContent>
               </Card>
