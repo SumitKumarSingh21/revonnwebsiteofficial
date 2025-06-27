@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
+import { Plus, Heart, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,6 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import CommentsSection from '@/components/CommentsSection';
 
 interface Post {
   id: string;
@@ -23,6 +24,7 @@ interface Post {
   user_image?: string;
   user_id: string;
   created_at: string;
+  is_saved?: boolean;
 }
 
 interface Profile {
@@ -49,6 +51,30 @@ const Community = () => {
     }
   }, [user]);
 
+  // Real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('posts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'posts'
+        },
+        () => {
+          fetchPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
   const fetchPosts = async () => {
     try {
       const { data, error } = await supabase
@@ -57,7 +83,25 @@ const Community = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setPosts(data || []);
+
+      // Check which posts are saved by current user
+      if (user) {
+        const { data: savedPosts } = await supabase
+          .from('saved_posts')
+          .select('post_id')
+          .eq('user_id', user.id);
+
+        const savedPostIds = new Set(savedPosts?.map(sp => sp.post_id) || []);
+        
+        const postsWithSaveStatus = (data || []).map(post => ({
+          ...post,
+          is_saved: savedPostIds.has(post.id)
+        }));
+
+        setPosts(postsWithSaveStatus);
+      } else {
+        setPosts(data || []);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -105,7 +149,6 @@ const Community = () => {
       setNewPost('');
       setSelectedImage(null);
       setShowNewPostDialog(false);
-      fetchPosts();
       
       toast({
         title: "Post Created",
@@ -120,14 +163,12 @@ const Community = () => {
     }
   };
 
-  const handlePostInteraction = async (postId: string, action: 'like' | 'comment') => {
+  const handlePostInteraction = async (postId: string, action: 'like') => {
     try {
       const post = posts.find(p => p.id === postId);
       if (!post) return;
 
-      const updateData = action === 'like' 
-        ? { likes: post.likes + 1 }
-        : { comments: post.comments + 1 };
+      const updateData = { likes: post.likes + 1 };
 
       const { error } = await supabase
         .from('posts')
@@ -148,6 +189,63 @@ const Community = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleSavePost = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      if (post.is_saved) {
+        // Unsave post
+        await supabase
+          .from('saved_posts')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('post_id', postId);
+
+        toast({
+          title: "Post unsaved",
+          description: "Post removed from your saved posts.",
+        });
+      } else {
+        // Save post
+        await supabase
+          .from('saved_posts')
+          .insert({
+            user_id: user.id,
+            post_id: postId
+          });
+
+        toast({
+          title: "Post saved",
+          description: "Post added to your saved posts.",
+        });
+      }
+
+      // Update local state
+      setPosts(posts.map(p => 
+        p.id === postId 
+          ? { ...p, is_saved: !p.is_saved }
+          : p
+      ));
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to save post",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCommentsUpdate = (postId: string, newCount: number) => {
+    setPosts(posts.map(p => 
+      p.id === postId 
+        ? { ...p, comments: newCount }
+        : p
+    ));
   };
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -321,9 +419,9 @@ const Community = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
-                                <Bookmark className="h-4 w-4 mr-2" />
-                                Save Post
+                              <DropdownMenuItem onClick={() => handleSavePost(item.id)}>
+                                <Bookmark className={`h-4 w-4 mr-2 ${item.is_saved ? 'fill-current' : ''}`} />
+                                {item.is_saved ? 'Unsave Post' : 'Save Post'}
                               </DropdownMenuItem>
                               <DropdownMenuItem>
                                 <Share className="h-4 w-4 mr-2" />
@@ -341,15 +439,11 @@ const Community = () => {
                         </div>
                         
                         <div className="flex items-center justify-between mt-4 max-w-md">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-gray-500 hover:text-blue-600"
-                            onClick={() => handlePostInteraction(item.id, 'comment')}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            {item.comments}
-                          </Button>
+                          <CommentsSection 
+                            postId={item.id}
+                            commentsCount={item.comments}
+                            onCommentsUpdate={(count) => handleCommentsUpdate(item.id, count)}
+                          />
                           <Button 
                             variant="ghost" 
                             size="sm" 

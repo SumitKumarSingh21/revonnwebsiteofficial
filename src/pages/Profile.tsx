@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import CommentsSection from '@/components/CommentsSection';
 
 interface UserProfile {
   id: string;
@@ -56,11 +57,16 @@ interface FollowerData {
   following_profile?: UserProfile;
 }
 
+interface SavedPost extends Post {
+  saved_at: string;
+}
+
 const Profile = () => {
   const { username } = useParams();
   const { user } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [followers, setFollowers] = useState<FollowerData[]>([]);
   const [following, setFollowing] = useState<FollowerData[]>([]);
@@ -76,6 +82,56 @@ const Profile = () => {
       loadProfile();
     }
   }, [username, user]);
+
+  // Real-time updates for bookings
+  useEffect(() => {
+    if (!user || !isOwnProfile) return;
+
+    const channel = supabase
+      .channel('bookings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          loadBookings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, isOwnProfile]);
+
+  // Real-time updates for saved posts
+  useEffect(() => {
+    if (!user || !isOwnProfile) return;
+
+    const channel = supabase
+      .channel('saved-posts-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'saved_posts',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          loadSavedPosts();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, isOwnProfile]);
 
   const loadProfile = async () => {
     try {
@@ -114,19 +170,10 @@ const Profile = () => {
 
       setPosts(postsData || []);
 
-      // Load bookings if own profile
+      // Load bookings and saved posts if own profile
       if (isOwnProfile) {
-        const { data: bookingsData } = await supabase
-          .from('bookings')
-          .select(`
-            *,
-            garages (name),
-            services (name)
-          `)
-          .eq('user_id', user?.id)
-          .order('created_at', { ascending: false });
-
-        setBookings(bookingsData || []);
+        await loadBookings();
+        await loadSavedPosts();
       }
 
       // Load followers - get follower profiles
@@ -201,6 +248,50 @@ const Profile = () => {
     }
   };
 
+  const loadBookings = async () => {
+    if (!user) return;
+
+    try {
+      const { data: bookingsData } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          garages (name),
+          services (name)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      setBookings(bookingsData || []);
+    } catch (error: any) {
+      console.error('Error loading bookings:', error);
+    }
+  };
+
+  const loadSavedPosts = async () => {
+    if (!user) return;
+
+    try {
+      const { data: savedPostsData } = await supabase
+        .from('saved_posts')
+        .select(`
+          created_at as saved_at,
+          posts (*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const savedPostsWithData = savedPostsData?.map(item => ({
+        ...item.posts,
+        saved_at: item.saved_at
+      })) || [];
+
+      setSavedPosts(savedPostsWithData);
+    } catch (error: any) {
+      console.error('Error loading saved posts:', error);
+    }
+  };
+
   const handleFollow = async () => {
     if (!user || !profile) return;
 
@@ -246,6 +337,19 @@ const Profile = () => {
     }
   };
 
+  const handleCommentsUpdate = (postId: string, newCount: number) => {
+    setPosts(posts.map(p => 
+      p.id === postId 
+        ? { ...p, comments: newCount }
+        : p
+    ));
+    setSavedPosts(savedPosts.map(p => 
+      p.id === postId 
+        ? { ...p, comments: newCount }
+        : p
+    ));
+  };
+
   if (loading || !profile) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
@@ -253,6 +357,10 @@ const Profile = () => {
       </div>
     );
   }
+
+  const tabsConfig = isOwnProfile 
+    ? ['posts', 'bookings', 'saved']
+    : ['posts'];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
@@ -413,9 +521,10 @@ const Profile = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className={`grid w-full ${isOwnProfile ? 'grid-cols-3' : 'grid-cols-1'}`}>
             <TabsTrigger value="posts">Posts</TabsTrigger>
             {isOwnProfile && <TabsTrigger value="bookings">Bookings</TabsTrigger>}
+            {isOwnProfile && <TabsTrigger value="saved">Saved</TabsTrigger>}
           </TabsList>
           
           <TabsContent value="posts" className="space-y-4 mt-6">
@@ -447,10 +556,11 @@ const Profile = () => {
                         </div>
                         
                         <div className="flex items-center justify-between mt-4 max-w-md">
-                          <Button variant="ghost" size="sm" className="text-gray-500">
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            {post.comments}
-                          </Button>
+                          <CommentsSection 
+                            postId={post.id}
+                            commentsCount={post.comments}
+                            onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
+                          />
                           <Button variant="ghost" size="sm" className="text-gray-500">
                             <Repeat2 className="h-4 w-4 mr-2" />
                             0
@@ -514,6 +624,71 @@ const Profile = () => {
                   <p className="text-gray-500">No bookings yet</p>
                   <Button className="mt-4" asChild>
                     <Link to="/services">Book your first service</Link>
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+          )}
+
+          {isOwnProfile && (
+            <TabsContent value="saved" className="space-y-4 mt-6">
+              {savedPosts.length > 0 ? (
+                savedPosts.map((post) => (
+                  <Card key={post.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex space-x-3">
+                        <Avatar>
+                          <AvatarFallback>{post.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-semibold">{post.username}</span>
+                            <span className="text-gray-400">·</span>
+                            <span className="text-gray-500 text-sm">
+                              {new Date(post.created_at).toLocaleDateString()}
+                            </span>
+                            <span className="text-gray-400">·</span>
+                            <span className="text-gray-500 text-xs">
+                              Saved {new Date(post.saved_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          
+                          <div className="mt-2">
+                            <p className="text-gray-900 whitespace-pre-wrap">{post.caption}</p>
+                            {post.post_image && (
+                              <img src={post.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-4 max-w-md">
+                            <CommentsSection 
+                              postId={post.id}
+                              commentsCount={post.comments}
+                              onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
+                            />
+                            <Button variant="ghost" size="sm" className="text-gray-500">
+                              <Repeat2 className="h-4 w-4 mr-2" />
+                              0
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-gray-500">
+                              <Heart className="h-4 w-4 mr-2" />
+                              {post.likes}
+                            </Button>
+                            <Button variant="ghost" size="sm" className="text-gray-500">
+                              <Share className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No saved posts yet</p>
+                  <Button className="mt-4" asChild>
+                    <Link to="/community">Explore posts to save</Link>
                   </Button>
                 </div>
               )}
