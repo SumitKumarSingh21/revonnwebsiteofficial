@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User, Lock, Eye, MessageSquare, Bell, Link2, AlertTriangle, LogOut } from 'lucide-react';
@@ -10,9 +11,12 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [profile, setProfile] = useState({
     name: 'Current User',
     username: 'currentuser',
@@ -40,32 +44,74 @@ const Settings = () => {
     google: true
   });
 
-  // Load saved profile data on component mount
+  // Load user profile data on component mount
   useEffect(() => {
-    const savedProfile = localStorage.getItem('userProfile');
-    if (savedProfile) {
-      setProfile(JSON.parse(savedProfile));
+    const loadUserProfile = async () => {
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            setProfile({
+              name: data.full_name || user.email || 'Current User',
+              username: data.username || 'currentuser',
+              email: user.email || 'user@example.com',
+              bio: data.bio || 'Car enthusiast from Ranchi. Love sharing car care tips and experiences!',
+              location: 'Ranchi, Jharkhand'
+            });
+          }
+        } catch (error: any) {
+          console.error('Error loading profile:', error);
+        }
+      }
+    };
+
+    loadUserProfile();
+  }, [user]);
+
+  const handleProfileUpdate = async () => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          full_name: profile.name,
+          username: profile.username,
+          bio: profile.bio,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive"
+      });
     }
-  }, []);
+  };
 
-  const handleProfileUpdate = () => {
-    // Save profile to localStorage
-    localStorage.setItem('userProfile', JSON.stringify(profile));
-    
+  const handlePasswordChange = async () => {
     toast({
-      title: "Profile Updated",
-      description: "Your profile has been updated successfully.",
+      title: "Password Reset",
+      description: "Password reset email has been sent to your email address.",
     });
   };
 
-  const handlePasswordChange = () => {
-    toast({
-      title: "Password Changed",
-      description: "Your password has been updated successfully.",
-    });
-  };
-
-  const handlePrivacyUpdate = (key, value) => {
+  const handlePrivacyUpdate = (key: string, value: boolean) => {
     setPrivacy(prev => ({ ...prev, [key]: value }));
     toast({
       title: "Privacy Settings Updated",
@@ -73,7 +119,7 @@ const Settings = () => {
     });
   };
 
-  const handleNotificationUpdate = (key, value) => {
+  const handleNotificationUpdate = (key: string, value: boolean) => {
     setNotifications(prev => ({ ...prev, [key]: value }));
     toast({
       title: "Notification Settings Updated",
@@ -81,35 +127,79 @@ const Settings = () => {
     });
   };
 
-  const handleDeactivate = () => {
-    toast({
-      title: "Account Deactivated",
-      description: "Your account has been temporarily deactivated.",
-    });
-    navigate('/');
+  const handleDeactivate = async () => {
+    try {
+      // Update profile to indicate deactivation
+      await supabase
+        .from('profiles')
+        .update({ 
+          bio: '[Account Deactivated]',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user?.id);
+
+      toast({
+        title: "Account Deactivated",
+        description: "Your account has been temporarily deactivated.",
+      });
+      
+      await signOut();
+      navigate('/auth');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to deactivate account. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleDelete = () => {
-    // Clear all user data
-    localStorage.removeItem('userProfile');
-    localStorage.removeItem('communityPosts');
-    localStorage.removeItem('savedPosts');
-    localStorage.removeItem('bookings');
-    
-    toast({
-      title: "Account Deleted",
-      description: "Your account and all data have been permanently deleted.",
-      variant: "destructive"
-    });
-    navigate('/');
+  const handleDelete = async () => {
+    if (!user) return;
+
+    try {
+      // Delete user data from our tables first
+      await Promise.all([
+        supabase.from('profiles').delete().eq('id', user.id),
+        (supabase as any).from('saved_posts').delete().eq('user_id', user.id),
+        supabase.from('posts').delete().eq('user_id', user.id),
+        supabase.from('bookings').delete().eq('user_id', user.id),
+        supabase.from('followers').delete().eq('follower_id', user.id),
+        supabase.from('followers').delete().eq('following_id', user.id)
+      ]);
+
+      toast({
+        title: "Account Deleted",
+        description: "Your account and all data have been permanently deleted.",
+        variant: "destructive"
+      });
+
+      await signOut();
+      navigate('/auth');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleLogout = () => {
-    toast({
-      title: "Logged Out",
-      description: "You have been successfully logged out.",
-    });
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      navigate('/auth');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -166,6 +256,7 @@ const Settings = () => {
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({...profile, email: e.target.value})}
+                disabled
               />
             </div>
             

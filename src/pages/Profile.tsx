@@ -1,19 +1,48 @@
 
 import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Settings, Calendar, MapPin, Heart, MessageCircle, Repeat2, Share, Users, UserPlus, UserMinus } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
+import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, Bookmark, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import CommentsSection from '@/components/CommentsSection';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
-interface UserProfile {
+interface Post {
+  id: string;
+  caption: string;
+  post_image?: string;
+  likes: number;
+  comments: number;
+  username: string;
+  user_image?: string;
+  user_id: string;
+  created_at: string;
+}
+
+interface Booking {
+  id: string;
+  garage_id: string;
+  service_id: string;
+  booking_date: string;
+  booking_time: string;
+  status: string;
+  total_amount: number;
+  customer_name: string;
+  customer_phone: string;
+  customer_email: string;
+  vehicle_make: string;
+  vehicle_model: string;
+  notes: string;
+  created_at: string;
+}
+
+interface Profile {
   id: string;
   username: string;
   full_name: string;
@@ -22,65 +51,28 @@ interface UserProfile {
   created_at: string;
 }
 
-interface Post {
-  id: string;
-  caption: string;
-  post_image: string;
-  likes: number;
-  comments: number;
-  created_at: string;
-  username: string;
-  user_id: string;
-}
-
-interface Booking {
-  id: string;
-  booking_date: string;
-  booking_time: string;
-  total_amount: number;
-  status: string;
-  customer_name: string;
-  vehicle_make: string;
-  vehicle_model: string;
-  garages: {
-    name: string;
-  };
-  services: {
-    name: string;
-  };
-}
-
-interface FollowerData {
-  follower_id: string;
-  following_id: string;
-  follower_profile?: UserProfile;
-  following_profile?: UserProfile;
-}
-
-interface SavedPost extends Post {
-  saved_at: string;
-}
-
 const Profile = () => {
   const { username } = useParams();
   const { user } = useAuth();
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
-  const [followers, setFollowers] = useState<FollowerData[]>([]);
-  const [following, setFollowing] = useState<FollowerData[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [stats, setStats] = useState({
+    posts: 0,
+    followers: 0,
+    following: 0
+  });
   const [loading, setLoading] = useState(true);
-  const [followersDialogOpen, setFollowersDialogOpen] = useState(false);
-  const [followingDialogOpen, setFollowingDialogOpen] = useState(false);
-
-  const isOwnProfile = !username || (profile && user && profile.id === user.id);
+  const [refreshing, setRefreshing] = useState(false);
+  const isOwnProfile = !username || user?.email?.split('@')[0] === username;
 
   useEffect(() => {
-    if (user) {
-      loadProfile();
-    }
+    fetchProfile();
+    fetchPosts();
+    fetchSavedPosts();
+    fetchBookings();
+    fetchStats();
   }, [username, user]);
 
   // Real-time updates for bookings
@@ -88,7 +80,7 @@ const Profile = () => {
     if (!user || !isOwnProfile) return;
 
     const channel = supabase
-      .channel('bookings-changes')
+      .channel('profile-bookings')
       .on(
         'postgres_changes',
         {
@@ -98,7 +90,7 @@ const Profile = () => {
           filter: `user_id=eq.${user.id}`
         },
         () => {
-          loadBookings();
+          fetchBookings();
         }
       )
       .subscribe();
@@ -108,232 +100,227 @@ const Profile = () => {
     };
   }, [user, isOwnProfile]);
 
-  // Real-time updates for saved posts
-  useEffect(() => {
-    if (!user || !isOwnProfile) return;
-
-    const channel = supabase
-      .channel('saved-posts-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'saved_posts',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          loadSavedPosts();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, isOwnProfile]);
-
-  const loadProfile = async () => {
+  const fetchProfile = async () => {
     try {
-      setLoading(true);
-      let profileId = user?.id;
-
-      if (username) {
-        // Find user by username
-        const { data: profileData, error: profileError } = await supabase
+      let profileData;
+      
+      if (isOwnProfile && user) {
+        // Fetch current user's profile
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+          
+        if (error && error.code !== 'PGRST116') throw error;
+        profileData = data;
+      } else if (username) {
+        // Fetch other user's profile by username
+        const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('username', username)
           .single();
+          
+        if (error) throw error;
+        profileData = data;
+      }
 
-        if (profileError) throw profileError;
-        profileId = profileData.id;
+      if (profileData) {
         setProfile(profileData);
-      } else {
-        // Load current user's profile
-        const { data: profileData, error: profileError } = await supabase
+      } else if (isOwnProfile && user) {
+        // Create profile if it doesn't exist
+        const defaultProfile = {
+          id: user.id,
+          username: user.email?.split('@')[0] || 'user',
+          full_name: user.email?.split('@')[0] || 'User',
+          bio: 'Car enthusiast & weekend racer 🏁',
+          created_at: new Date().toISOString()
+        };
+        
+        const { error } = await supabase
           .from('profiles')
-          .select('*')
-          .eq('id', user?.id)
-          .single();
-
-        if (profileError) throw profileError;
-        setProfile(profileData);
+          .insert(defaultProfile);
+          
+        if (!error) {
+          setProfile(defaultProfile);
+        }
       }
-
-      // Load posts
-      const { data: postsData } = await supabase
-        .from('posts')
-        .select('*')
-        .eq('user_id', profileId)
-        .order('created_at', { ascending: false });
-
-      setPosts(postsData || []);
-
-      // Load bookings and saved posts if own profile
-      if (isOwnProfile) {
-        await loadBookings();
-        await loadSavedPosts();
-      }
-
-      // Load followers - get follower profiles
-      const { data: followersData } = await supabase
-        .from('followers')
-        .select('follower_id, following_id')
-        .eq('following_id', profileId);
-
-      if (followersData) {
-        const followersWithProfiles = await Promise.all(
-          followersData.map(async (follow) => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', follow.follower_id)
-              .single();
-            
-            return {
-              ...follow,
-              follower_profile: profileData
-            };
-          })
-        );
-        setFollowers(followersWithProfiles);
-      }
-
-      // Load following - get following profiles
-      const { data: followingData } = await supabase
-        .from('followers')
-        .select('follower_id, following_id')
-        .eq('follower_id', profileId);
-
-      if (followingData) {
-        const followingWithProfiles = await Promise.all(
-          followingData.map(async (follow) => {
-            const { data: profileData } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', follow.following_id)
-              .single();
-            
-            return {
-              ...follow,
-              following_profile: profileData
-            };
-          })
-        );
-        setFollowing(followingWithProfiles);
-      }
-
-      // Check if current user is following this profile
-      if (!isOwnProfile && user) {
-        const { data: followCheck } = await supabase
-          .from('followers')
-          .select('id')
-          .eq('follower_id', user.id)
-          .eq('following_id', profileId)
-          .single();
-
-        setIsFollowing(!!followCheck);
-      }
-
     } catch (error: any) {
-      console.error('Error loading profile:', error);
+      console.error('Error fetching profile:', error);
       toast({
         title: "Error",
         description: "Failed to load profile",
         variant: "destructive",
       });
+    }
+  };
+
+  const fetchPosts = async () => {
+    try {
+      const targetUserId = isOwnProfile ? user?.id : profile?.id;
+      if (!targetUserId) return;
+
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('user_id', targetUserId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (error: any) {
+      console.error('Error fetching posts:', error);
+    }
+  };
+
+  const fetchSavedPosts = async () => {
+    if (!isOwnProfile || !user) return;
+
+    try {
+      // Get saved post IDs
+      const { data: savedPostIds, error: savedError } = await (supabase as any)
+        .from('saved_posts')
+        .select('post_id')
+        .eq('user_id', user.id);
+
+      if (savedError) throw savedError;
+
+      if (savedPostIds && savedPostIds.length > 0) {
+        // Get the actual posts
+        const postIds = savedPostIds.map((sp: any) => sp.post_id);
+        const { data: postsData, error: postsError } = await supabase
+          .from('posts')
+          .select('*')
+          .in('id', postIds)
+          .order('created_at', { ascending: false });
+
+        if (postsError) throw postsError;
+        setSavedPosts(postsData || []);
+      } else {
+        setSavedPosts([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching saved posts:', error);
+    }
+  };
+
+  const fetchBookings = async () => {
+    if (!isOwnProfile || !user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setBookings(data || []);
+    } catch (error: any) {
+      console.error('Error fetching bookings:', error);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const targetUserId = isOwnProfile ? user?.id : profile?.id;
+      if (!targetUserId) return;
+
+      // Get posts count
+      const { count: postsCount } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', targetUserId);
+
+      // Get followers count
+      const { count: followersCount } = await supabase
+        .from('followers')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', targetUserId);
+
+      // Get following count
+      const { count: followingCount } = await supabase
+        .from('followers')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', targetUserId);
+
+      setStats({
+        posts: postsCount || 0,
+        followers: followersCount || 0,
+        following: followingCount || 0
+      });
+    } catch (error: any) {
+      console.error('Error fetching stats:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadBookings = async () => {
-    if (!user) return;
-
-    try {
-      const { data: bookingsData } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          garages (name),
-          services (name)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      setBookings(bookingsData || []);
-    } catch (error: any) {
-      console.error('Error loading bookings:', error);
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      fetchProfile(),
+      fetchPosts(),
+      fetchSavedPosts(),
+      fetchBookings(),
+      fetchStats()
+    ]);
+    setRefreshing(false);
+    toast({
+      title: "Refreshed",
+      description: "Profile data has been updated.",
+    });
   };
 
-  const loadSavedPosts = async () => {
-    if (!user) return;
+  const handleShare = async (post: Post, platform?: string) => {
+    const shareText = `Check out this post: ${post.caption}`;
+    const shareUrl = window.location.href;
 
-    try {
-      const { data: savedPostsData } = await (supabase as any)
-        .from('saved_posts')
-        .select(`
-          created_at as saved_at,
-          posts (*)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      const savedPostsWithData = savedPostsData?.map((item: any) => ({
-        ...item.posts,
-        saved_at: item.saved_at
-      })) || [];
-
-      setSavedPosts(savedPostsWithData);
-    } catch (error: any) {
-      console.error('Error loading saved posts:', error);
-    }
-  };
-
-  const handleFollow = async () => {
-    if (!user || !profile) return;
-
-    try {
-      if (isFollowing) {
-        // Unfollow
-        await supabase
-          .from('followers')
-          .delete()
-          .eq('follower_id', user.id)
-          .eq('following_id', profile.id);
-        
-        setIsFollowing(false);
-        setFollowers(prev => prev.filter(f => f.follower_id !== user.id));
-        toast({
-          title: "Unfollowed",
-          description: `You unfollowed ${profile.full_name}`,
-        });
-      } else {
-        // Follow
-        await supabase
-          .from('followers')
-          .insert({
-            follower_id: user.id,
-            following_id: profile.id
+    if (platform) {
+      let url = '';
+      switch (platform) {
+        case 'twitter':
+          url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+          break;
+        case 'facebook':
+          url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+          break;
+        case 'whatsapp':
+          url = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+          break;
+        case 'linkedin':
+          url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+          break;
+      }
+      if (url) {
+        window.open(url, '_blank');
+      }
+    } else {
+      // Native share API
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'Revonn Post',
+            text: shareText,
+            url: shareUrl,
           });
-        
-        setIsFollowing(true);
-        // Reload followers to get updated list
-        loadProfile();
+        } catch (error) {
+          // Fallback to clipboard
+          navigator.clipboard.writeText(shareUrl);
+          toast({
+            title: "Link Copied",
+            description: "Post link has been copied to clipboard.",
+          });
+        }
+      } else {
+        // Fallback to clipboard
+        navigator.clipboard.writeText(shareUrl);
         toast({
-          title: "Following",
-          description: `You are now following ${profile.full_name}`,
+          title: "Link Copied",
+          description: "Post link has been copied to clipboard.",
         });
       }
-    } catch (error: any) {
-      console.error('Error following/unfollowing:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update follow status",
-        variant: "destructive",
-      });
     }
   };
 
@@ -350,7 +337,7 @@ const Profile = () => {
     ));
   };
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -358,9 +345,72 @@ const Profile = () => {
     );
   }
 
-  const tabsConfig = isOwnProfile 
-    ? ['posts', 'bookings', 'saved']
-    : ['posts'];
+  const renderPost = (post: Post) => (
+    <Card key={post.id} className="hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex space-x-3">
+          <Avatar>
+            <AvatarFallback>{post.username.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold">{post.username}</span>
+                <span className="text-gray-400">·</span>
+                <span className="text-gray-500 text-sm">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-2">
+              <p className="text-gray-900 whitespace-pre-wrap">{post.caption}</p>
+              {post.post_image && (
+                <img src={post.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
+              )}
+            </div>
+            
+            <div className="flex items-center justify-between mt-4 max-w-md">
+              <CommentsSection 
+                postId={post.id}
+                commentsCount={post.comments}
+                onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
+              />
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600">
+                <Heart className="h-4 w-4 mr-2" />
+                {post.likes}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
+                    <Share className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleShare(post, 'twitter')}>
+                    Share on Twitter
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post, 'facebook')}>
+                    Share on Facebook
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post, 'whatsapp')}>
+                    Share on WhatsApp
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post, 'linkedin')}>
+                    Share on LinkedIn
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post)}>
+                    Copy Link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
@@ -374,145 +424,63 @@ const Profile = () => {
                 Back
               </Link>
             </Button>
-            <div className="text-center">
-              <h1 className="text-lg font-bold text-gray-900">{profile.full_name}</h1>
-              <p className="text-sm text-gray-500">{posts.length} posts</p>
-            </div>
-            {isOwnProfile && (
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/settings">
-                  <Settings className="h-4 w-4" />
-                </Link>
+            <h1 className="text-xl font-bold text-gray-900">Profile</h1>
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
-            )}
-            {!isOwnProfile && <div className="w-10"></div>}
+              {isOwnProfile && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/settings">
+                    <Settings className="h-4 w-4" />
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Profile Header */}
+        {/* Profile Info */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Avatar className="w-20 h-20">
-                {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                <AvatarFallback className="text-2xl">{profile.full_name?.charAt(0) || 'U'}</AvatarFallback>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+              <Avatar className="h-20 w-20">
+                <AvatarFallback className="text-2xl">
+                  {profile?.full_name?.charAt(0) || profile?.username?.charAt(0) || 'U'}
+                </AvatarFallback>
               </Avatar>
               
               <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-2xl font-bold">{profile.full_name}</h2>
-                    <p className="text-gray-600">@{profile.username}</p>
-                  </div>
-                  
-                  {!isOwnProfile && (
-                    <Button 
-                      onClick={handleFollow}
-                      variant={isFollowing ? "outline" : "default"}
-                      className="mt-2 sm:mt-0"
-                    >
-                      {isFollowing ? (
-                        <>
-                          <UserMinus className="h-4 w-4 mr-2" />
-                          Following
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="h-4 w-4 mr-2" />
-                          Follow
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {profile?.full_name || profile?.username || 'User'}
+                </h1>
+                <p className="text-gray-600">@{profile?.username || 'user'}</p>
+                {profile?.bio && (
+                  <p className="text-gray-700 mt-2">{profile.bio}</p>
+                )}
                 
-                <p className="mt-2 text-gray-700">{profile.bio}</p>
-                
-                <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
+                <div className="flex items-center space-x-4 mt-4 text-sm text-gray-500">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-1" />
-                    Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                    Joined {new Date(profile?.created_at || '').toLocaleDateString()}
                   </div>
                 </div>
                 
-                <div className="flex space-x-4 mt-3">
-                  <Dialog open={followingDialogOpen} onOpenChange={setFollowingDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" className="p-0 h-auto">
-                        <span className="text-sm">
-                          <strong>{following.length}</strong> <span className="text-gray-500">Following</span>
-                        </span>
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Following</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {following.map((follow) => (
-                          <div key={follow.following_id} className="flex items-center space-x-3">
-                            <Avatar className="w-10 h-10">
-                              {follow.following_profile?.avatar_url && <AvatarImage src={follow.following_profile.avatar_url} />}
-                              <AvatarFallback>{follow.following_profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <Link 
-                                to={`/profile/${follow.following_profile?.username}`}
-                                className="font-semibold hover:underline"
-                                onClick={() => setFollowingDialogOpen(false)}
-                              >
-                                {follow.following_profile?.full_name}
-                              </Link>
-                              <p className="text-sm text-gray-500">@{follow.following_profile?.username}</p>
-                            </div>
-                          </div>
-                        ))}
-                        {following.length === 0 && (
-                          <p className="text-gray-500 text-center py-4">Not following anyone yet</p>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-
-                  <Dialog open={followersDialogOpen} onOpenChange={setFollowersDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" className="p-0 h-auto">
-                        <span className="text-sm">
-                          <strong>{followers.length}</strong> <span className="text-gray-500">Followers</span>
-                        </span>
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Followers</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-3 max-h-96 overflow-y-auto">
-                        {followers.map((follower) => (
-                          <div key={follower.follower_id} className="flex items-center space-x-3">
-                            <Avatar className="w-10 h-10">
-                              {follower.follower_profile?.avatar_url && <AvatarImage src={follower.follower_profile.avatar_url} />}
-                              <AvatarFallback>{follower.follower_profile?.full_name?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1">
-                              <Link 
-                                to={`/profile/${follower.follower_profile?.username}`}
-                                className="font-semibold hover:underline"
-                                onClick={() => setFollowersDialogOpen(false)}
-                              >
-                                {follower.follower_profile?.full_name}
-                              </Link>
-                              <p className="text-sm text-gray-500">@{follower.follower_profile?.username}</p>
-                            </div>
-                          </div>
-                        ))}
-                        {followers.length === 0 && (
-                          <p className="text-gray-500 text-center py-4">No followers yet</p>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                <div className="flex items-center space-x-6 mt-4">
+                  <div className="text-center">
+                    <div className="font-bold text-lg">{stats.posts}</div>
+                    <div className="text-gray-500 text-sm">Posts</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-lg">{stats.followers}</div>
+                    <div className="text-gray-500 text-sm">Followers</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="font-bold text-lg">{stats.following}</div>
+                    <div className="text-gray-500 text-sm">Following</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -521,177 +489,81 @@ const Profile = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className={`grid w-full ${isOwnProfile ? 'grid-cols-3' : 'grid-cols-1'}`}>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="posts">Posts</TabsTrigger>
-            {isOwnProfile && <TabsTrigger value="bookings">Bookings</TabsTrigger>}
             {isOwnProfile && <TabsTrigger value="saved">Saved</TabsTrigger>}
+            {isOwnProfile && <TabsTrigger value="bookings">Bookings</TabsTrigger>}
           </TabsList>
           
-          <TabsContent value="posts" className="space-y-4 mt-6">
-            {posts.length > 0 ? (
-              posts.map((post) => (
-                <Card key={post.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex space-x-3">
-                      <Avatar>
-                        {profile.avatar_url && <AvatarImage src={profile.avatar_url} />}
-                        <AvatarFallback>{profile.full_name?.charAt(0) || 'U'}</AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-semibold">{profile.full_name}</span>
-                          <span className="text-gray-500">@{profile.username}</span>
-                          <span className="text-gray-400">·</span>
-                          <span className="text-gray-500 text-sm">
-                            {new Date(post.created_at).toLocaleDateString()}
-                          </span>
-                        </div>
-                        
-                        <div className="mt-2">
-                          <p className="text-gray-900 whitespace-pre-wrap">{post.caption}</p>
-                          {post.post_image && (
-                            <img src={post.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center justify-between mt-4 max-w-md">
-                          <CommentsSection 
-                            postId={post.id}
-                            commentsCount={post.comments}
-                            onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
-                          />
-                          <Button variant="ghost" size="sm" className="text-gray-500">
-                            <Repeat2 className="h-4 w-4 mr-2" />
-                            0
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-gray-500">
-                            <Heart className="h-4 w-4 mr-2" />
-                            {post.likes}
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-gray-500">
-                            <Share className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No posts yet</p>
-                {isOwnProfile && (
-                  <Button className="mt-4" asChild>
-                    <Link to="/community">Share your first post</Link>
-                  </Button>
-                )}
-              </div>
-            )}
+          <TabsContent value="posts" className="mt-6">
+            <div className="space-y-4">
+              {posts.length > 0 ? (
+                posts.map(renderPost)
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No posts yet.</p>
+                </div>
+              )}
+            </div>
           </TabsContent>
           
           {isOwnProfile && (
-            <TabsContent value="bookings" className="space-y-4 mt-6">
-              {bookings.length > 0 ? (
-                bookings.map((booking) => (
-                  <Card key={booking.id}>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{booking.garages?.name || 'Unknown Garage'}</h3>
-                          <p className="text-gray-600">{booking.vehicle_make} {booking.vehicle_model}</p>
-                          <p className="text-sm text-gray-500">
-                            {new Date(booking.booking_date).toLocaleDateString()} at {booking.booking_time}
-                          </p>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            <Badge variant="secondary" className="text-xs">
-                              {booking.services?.name || 'Service'}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
-                            {booking.status}
-                          </Badge>
-                          <p className="font-semibold mt-1">₹{booking.total_amount}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No bookings yet</p>
-                  <Button className="mt-4" asChild>
-                    <Link to="/services">Book your first service</Link>
-                  </Button>
-                </div>
-              )}
+            <TabsContent value="saved" className="mt-6">
+              <div className="space-y-4">
+                {savedPosts.length > 0 ? (
+                  savedPosts.map(renderPost)
+                ) : (
+                  <div className="text-center py-12">
+                    <Bookmark className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No saved posts yet.</p>
+                    <p className="text-gray-400 text-sm">Posts you save will appear here.</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           )}
-
+          
           {isOwnProfile && (
-            <TabsContent value="saved" className="space-y-4 mt-6">
-              {savedPosts.length > 0 ? (
-                savedPosts.map((post) => (
-                  <Card key={post.id} className="hover:shadow-md transition-shadow">
-                    <CardContent className="p-4">
-                      <div className="flex space-x-3">
-                        <Avatar>
-                          <AvatarFallback>{post.username?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-semibold">{post.username}</span>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500 text-sm">
-                              {new Date(post.created_at).toLocaleDateString()}
-                            </span>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500 text-xs">
-                              Saved {new Date(post.saved_at).toLocaleDateString()}
-                            </span>
-                          </div>
-                          
-                          <div className="mt-2">
-                            <p className="text-gray-900 whitespace-pre-wrap">{post.caption}</p>
-                            {post.post_image && (
-                              <img src={post.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
+            <TabsContent value="bookings" className="mt-6">
+              <div className="space-y-4">
+                {bookings.length > 0 ? (
+                  bookings.map((booking) => (
+                    <Card key={booking.id}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold">Service Booking</h3>
+                            <p className="text-gray-600">
+                              {booking.vehicle_make} {booking.vehicle_model}
+                            </p>
+                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                              <span>📅 {new Date(booking.booking_date).toLocaleDateString()}</span>
+                              <span>🕐 {booking.booking_time}</span>
+                            </div>
+                            {booking.notes && (
+                              <p className="text-gray-600 text-sm mt-2">{booking.notes}</p>
                             )}
                           </div>
-                          
-                          <div className="flex items-center justify-between mt-4 max-w-md">
-                            <CommentsSection 
-                              postId={post.id}
-                              commentsCount={post.comments}
-                              onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
-                            />
-                            <Button variant="ghost" size="sm" className="text-gray-500">
-                              <Repeat2 className="h-4 w-4 mr-2" />
-                              0
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-gray-500">
-                              <Heart className="h-4 w-4 mr-2" />
-                              {post.likes}
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-gray-500">
-                              <Share className="h-4 w-4" />
-                            </Button>
+                          <div className="text-right">
+                            <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
+                              {booking.status}
+                            </Badge>
+                            <div className="font-bold text-lg mt-1">
+                              ₹{booking.total_amount}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No saved posts yet</p>
-                  <Button className="mt-4" asChild>
-                    <Link to="/community">Explore posts to save</Link>
-                  </Button>
-                </div>
-              )}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No bookings yet.</p>
+                    <p className="text-gray-400 text-sm">Your service bookings will appear here.</p>
+                  </div>
+                )}
+              </div>
             </TabsContent>
           )}
         </Tabs>
