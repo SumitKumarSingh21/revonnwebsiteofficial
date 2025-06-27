@@ -86,12 +86,12 @@ const Community = () => {
 
       // Check which posts are saved by current user
       if (user) {
-        const { data: savedPosts } = await supabase
+        const { data: savedPosts } = await (supabase as any)
           .from('saved_posts')
           .select('post_id')
           .eq('user_id', user.id);
 
-        const savedPostIds = new Set(savedPosts?.map(sp => sp.post_id) || []);
+        const savedPostIds = new Set(savedPosts?.map((sp: any) => sp.post_id) || []);
         
         const postsWithSaveStatus = (data || []).map(post => ({
           ...post,
@@ -200,7 +200,7 @@ const Community = () => {
 
       if (post.is_saved) {
         // Unsave post
-        await supabase
+        await (supabase as any)
           .from('saved_posts')
           .delete()
           .eq('user_id', user.id)
@@ -212,7 +212,7 @@ const Community = () => {
         });
       } else {
         // Save post
-        await supabase
+        await (supabase as any)
           .from('saved_posts')
           .insert({
             user_id: user.id,

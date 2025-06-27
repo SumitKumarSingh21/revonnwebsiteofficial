@@ -272,7 +272,7 @@ const Profile = () => {
     if (!user) return;
 
     try {
-      const { data: savedPostsData } = await supabase
+      const { data: savedPostsData } = await (supabase as any)
         .from('saved_posts')
         .select(`
           created_at as saved_at,
@@ -281,7 +281,7 @@ const Profile = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      const savedPostsWithData = savedPostsData?.map(item => ({
+      const savedPostsWithData = savedPostsData?.map((item: any) => ({
         ...item.posts,
         saved_at: item.saved_at
       })) || [];
