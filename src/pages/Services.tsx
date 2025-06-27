@@ -1,93 +1,47 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { MapPin, Star, Clock, ChevronRight, ArrowLeft, Search } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { MapPin, Star, Search, Filter, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  garage_id: string;
-  category: string;
-  duration?: number;
-}
+import PageHeader from '@/components/PageHeader';
 
 interface Garage {
   id: string;
   name: string;
   location: string;
-  average_rating: number;
-  total_reviews: number;
+  rating: number;
+  services: string[];
+  price_range: string;
   image_url?: string;
-  services: Service[];
 }
 
 const Services = () => {
+  const navigate = useNavigate();
   const [garages, setGarages] = useState<Garage[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showMoreNearby, setShowMoreNearby] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchGaragesAndServices();
+    fetchGarages();
   }, []);
 
-  const fetchGaragesAndServices = async () => {
+  const fetchGarages = async () => {
     try {
-      setLoading(true);
-      
-      // Fetch garages with their services in a single query
-      const { data: garagesWithServices, error } = await supabase
+      const { data, error } = await supabase
         .from('garages')
-        .select(`
-          *,
-          services (
-            id,
-            name,
-            description,
-            price,
-            category,
-            duration
-          )
-        `)
-        .eq('status', 'active')
-        .order('average_rating', { ascending: false });
+        .select('*')
+        .order('rating', { ascending: false });
 
       if (error) throw error;
-
-      console.log('Fetched garages with services:', garagesWithServices);
-      
-      // Transform the data to match our interface
-      const transformedGarages: Garage[] = garagesWithServices?.map(garage => ({
-        id: garage.id,
-        name: garage.name,
-        location: garage.location || '',
-        average_rating: garage.average_rating || 0,
-        total_reviews: garage.total_reviews || 0,
-        image_url: garage.image_url,
-        services: garage.services ? garage.services.map((service: any) => ({
-          id: service.id,
-          name: service.name,
-          description: service.description,
-          price: service.price,
-          garage_id: garage.id,
-          category: service.category,
-          duration: service.duration
-        })) : []
-      })) || [];
-
-      setGarages(transformedGarages);
+      setGarages(data || []);
     } catch (error: any) {
-      console.error('Error fetching garages:', error);
       toast({
         title: "Error",
-        description: "Failed to load garages and services",
+        description: "Failed to load garages",
         variant: "destructive",
       });
     } finally {
@@ -97,14 +51,11 @@ const Services = () => {
 
   const filteredGarages = garages.filter(garage =>
     garage.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    garage.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    garage.services?.some(service => 
-      service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    garage.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    garage.services.some(service => 
+      service.toLowerCase().includes(searchQuery.toLowerCase())
     )
   );
-
-  const displayedGarages = showMoreNearby ? filteredGarages : filteredGarages.slice(0, 6);
 
   if (loading) {
     return (
@@ -117,150 +68,119 @@ const Services = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Back to Home
-                </Link>
-              </Button>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Car Services</h1>
-            <div className="w-20"></div>
-          </div>
-        </div>
-      </div>
+      <PageHeader 
+        title="Car Services" 
+        backTo="/"
+      />
 
-      {/* Search Bar */}
+      {/* Search and Filter */}
       <div className="bg-white border-b sticky top-16 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              type="text"
-              placeholder="Search services or garages..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full"
-            />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex space-x-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                type="text"
+                placeholder="Search services or garages..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Button variant="outline" size="sm">
+              <Filter className="h-4 w-4 mr-2" />
+              Filter
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {searchQuery ? (
-          <section>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Search Results ({filteredGarages.length})
-            </h2>
-            {filteredGarages.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No garages found matching your search.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredGarages.map((garage) => (
-                  <GarageCard key={garage.id} garage={garage} />
-                ))}
-              </div>
-            )}
-          </section>
-        ) : (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Available Garages</h2>
-              <MapPin className="h-6 w-6 text-blue-600" />
-            </div>
-            
-            {garages.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500">No garages available at the moment.</p>
-                <p className="text-sm text-gray-400 mt-2">Check back later or contact support.</p>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                  {displayedGarages.map((garage) => (
-                    <GarageCard key={garage.id} garage={garage} />
-                  ))}
+      {/* Available Garages */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Available Garages</h2>
+          <div className="flex items-center text-blue-600">
+            <MapPin className="h-4 w-4 mr-1" />
+            <span className="text-sm">Near you</span>
+          </div>
+        </div>
+
+        {filteredGarages.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {filteredGarages.map((garage) => (
+              <Card key={garage.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
+                <div className="aspect-video bg-gradient-to-r from-blue-100 to-blue-200 rounded-t-lg flex items-center justify-center">
+                  {garage.image_url ? (
+                    <img src={garage.image_url} alt={garage.name} className="w-full h-full object-cover rounded-t-lg" />
+                  ) : (
+                    <div className="text-4xl">🏢</div>
+                  )}
                 </div>
                 
-                {!showMoreNearby && filteredGarages.length > 6 && (
-                  <div className="text-center">
-                    <Button variant="outline" onClick={() => setShowMoreNearby(true)}>
-                      View More ({filteredGarages.length - 6} more)
-                    </Button>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg group-hover:text-blue-600 transition-colors">
+                        {garage.name}
+                      </CardTitle>
+                      <div className="flex items-center mt-1 text-gray-500">
+                        <MapPin className="h-4 w-4 mr-1" />
+                        <span className="text-sm">{garage.location}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
+                      <Star className="h-4 w-4 text-yellow-500 mr-1 fill-current" />
+                      <span className="text-sm font-medium">{garage.rating}</span>
+                    </div>
                   </div>
-                )}
-              </>
-            )}
-          </section>
+                </CardHeader>
+                
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {garage.services.slice(0, 3).map((service, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          {service}
+                        </Badge>
+                      ))}
+                      {garage.services.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{garage.services.length - 3} more
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        Starting from <span className="font-semibold text-green-600">{garage.price_range}</span>
+                      </span>
+                      <Button 
+                        size="sm" 
+                        onClick={() => navigate(`/book/${garage.id}`)}
+                        className="group-hover:bg-blue-600 transition-colors"
+                      >
+                        Book Now
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔍</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No garages found</h3>
+            <p className="text-gray-500">
+              {searchQuery 
+                ? "Try adjusting your search terms or filters." 
+                : "No garages are available in your area at the moment."
+              }
+            </p>
+          </div>
         )}
       </div>
     </div>
-  );
-};
-
-const GarageCard = ({ garage }: { garage: Garage }) => {
-  return (
-    <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-            {garage.image_url ? (
-              <img src={garage.image_url} alt={garage.name} className="w-full h-full rounded-full object-cover" />
-            ) : (
-              <span className="text-blue-600 font-bold">{garage.name.charAt(0)}</span>
-            )}
-          </div>
-          <div className="flex items-center">
-            <Star className="h-4 w-4 text-yellow-400 mr-1" />
-            <span className="font-semibold">{garage.average_rating?.toFixed(1) || '0.0'}</span>
-            <span className="text-gray-500 text-sm ml-1">({garage.total_reviews || 0})</span>
-          </div>
-        </div>
-        
-        <h3 className="text-lg font-semibold mb-2">{garage.name}</h3>
-        
-        <div className="flex items-center text-gray-500 mb-3">
-          <MapPin className="h-4 w-4 mr-1" />
-          <span className="text-sm">{garage.location || 'Location not specified'}</span>
-        </div>
-        
-        <div className="flex flex-wrap gap-1 mb-4">
-          {garage.services && garage.services.length > 0 ? (
-            <>
-              {garage.services.slice(0, 2).map((service) => (
-                <Badge key={service.id} variant="secondary" className="text-xs">
-                  {service.name} - ₹{service.price}
-                </Badge>
-              ))}
-              {garage.services.length > 2 && (
-                <Badge variant="outline" className="text-xs">
-                  +{garage.services.length - 2} more services
-                </Badge>
-              )}
-            </>
-          ) : (
-            <Badge variant="outline" className="text-xs">
-              No services available
-            </Badge>
-          )}
-        </div>
-      </CardContent>
-      
-      <CardFooter className="px-6 pb-6">
-        <Button className="w-full" asChild>
-          <Link to={`/book/${garage.id}`}>
-            Book Now
-            <ChevronRight className="h-4 w-4 ml-2" />
-          </Link>
-        </Button>
-      </CardFooter>
-    </Card>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Heart, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
@@ -13,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import CommentsSection from '@/components/CommentsSection';
+import PageHeader from '@/components/PageHeader';
 
 interface Post {
   id: string;
@@ -240,6 +240,52 @@ const Community = () => {
     }
   };
 
+  const handleSharePost = async (postId: string, platform?: string) => {
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+
+    const shareText = `Check out this post by ${post.username}: ${post.caption}`;
+    const shareUrl = `${window.location.origin}/community`;
+
+    if (platform) {
+      let url = '';
+      switch (platform) {
+        case 'twitter':
+          url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+          break;
+        case 'facebook':
+          url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+          break;
+        case 'whatsapp':
+          url = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+          break;
+        case 'linkedin':
+          url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`;
+          break;
+      }
+      
+      if (url) {
+        window.open(url, '_blank', 'width=600,height=400');
+        return;
+      }
+    }
+
+    // Fallback to copying link
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({
+        title: "Link copied",
+        description: "Post link copied to clipboard.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy link",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleCommentsUpdate = (postId: string, newCount: number) => {
     setPosts(posts.map(p => 
       p.id === postId 
@@ -281,85 +327,88 @@ const Community = () => {
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <h1 className="text-2xl font-bold text-gray-900">Community</h1>
-            <div className="flex items-center space-x-2">
-              <Button variant="ghost" size="sm" asChild>
-                <Link to="/notifications">
-                  <Bell className="h-5 w-5" />
-                </Link>
-              </Button>
-              <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Post
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Create New Post</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <Avatar>
-                        <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <Textarea
-                          placeholder="What's on your mind?"
-                          value={newPost}
-                          onChange={(e) => setNewPost(e.target.value)}
-                          className="min-h-[100px] border-none resize-none focus:ring-0 p-0"
-                        />
-                      </div>
-                    </div>
-                    
-                    {selectedImage && (
-                      <div className="relative">
-                        <img src={selectedImage} alt="Selected" className="max-w-full h-auto rounded-lg" />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70"
-                          onClick={() => setSelectedImage(null)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageUpload}
-                          className="hidden"
-                          id="image-upload"
-                        />
-                        <label htmlFor="image-upload">
-                          <Button variant="ghost" size="sm" asChild>
-                            <span className="cursor-pointer">📷 Photo</span>
-                          </Button>
-                        </label>
-                      </div>
-                      <Button onClick={handleCreatePost} disabled={!newPost.trim()}>
-                        Post
-                      </Button>
+      <PageHeader 
+        title="Community" 
+        showBackButton={false}
+      />
+
+      {/* Action Bar */}
+      <div className="bg-white border-b">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="flex items-center justify-end space-x-2">
+            <Button variant="ghost" size="sm" asChild>
+              <Link to="/notifications">
+                <Bell className="h-5 w-5" />
+              </Link>
+            </Button>
+            <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Post
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Create New Post</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <Avatar>
+                      <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <Textarea
+                        placeholder="What's on your mind?"
+                        value={newPost}
+                        onChange={(e) => setNewPost(e.target.value)}
+                        className="min-h-[100px] border-none resize-none focus:ring-0 p-0"
+                      />
                     </div>
                   </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+                  
+                  {selectedImage && (
+                    <div className="relative">
+                      <img src={selectedImage} alt="Selected" className="max-w-full h-auto rounded-lg" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70"
+                        onClick={() => setSelectedImage(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        id="image-upload"
+                      />
+                      <label htmlFor="image-upload">
+                        <Button variant="ghost" size="sm" asChild>
+                          <span className="cursor-pointer">📷 Photo</span>
+                        </Button>
+                      </label>
+                    </div>
+                    <Button onClick={handleCreatePost} disabled={!newPost.trim()}>
+                      Post
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white border-b sticky top-16 z-10">
+      <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -423,8 +472,19 @@ const Community = () => {
                                 <Bookmark className={`h-4 w-4 mr-2 ${item.is_saved ? 'fill-current' : ''}`} />
                                 {item.is_saved ? 'Unsave Post' : 'Save Post'}
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Share className="h-4 w-4 mr-2" />
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'twitter')}>
+                                Share on Twitter
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'facebook')}>
+                                Share on Facebook
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'whatsapp')}>
+                                Share on WhatsApp
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'linkedin')}>
+                                Share on LinkedIn
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
                                 Copy Link
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -461,9 +521,30 @@ const Community = () => {
                             <Heart className="h-4 w-4 mr-2" />
                             {item.likes}
                           </Button>
-                          <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
-                            <Share className="h-4 w-4" />
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
+                                <Share className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'twitter')}>
+                                Share on Twitter
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'facebook')}>
+                                Share on Facebook
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'whatsapp')}>
+                                Share on WhatsApp
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'linkedin')}>
+                                Share on LinkedIn
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
+                                Copy Link
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>
