@@ -26,8 +26,8 @@ const BottomNavigation = () => {
               to={item.path}
               className={`flex flex-col items-center py-2 px-3 rounded-lg transition-colors ${
                 isActive(item.path)
-                  ? 'text-blue-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-blue-600'
+                  ? 'text-red-600 bg-red-50'
+                  : 'text-gray-600 hover:text-red-600'
               }`}
             >
               <Icon className="h-5 w-5 mb-1" />

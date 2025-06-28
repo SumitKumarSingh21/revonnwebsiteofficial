@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Car } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PageHeaderProps {
@@ -24,9 +24,9 @@ const PageHeader = ({ title, showBackButton = true, backTo = "/" }: PageHeaderPr
               </Button>
             )}
             <div className="flex items-center space-x-3">
-              <Car className="h-8 w-8 text-blue-600" />
+              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-8 w-8" />
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Revonn</h1>
+                <h1 className="text-xl font-bold text-red-600">Revonn</h1>
                 <p className="text-xs text-gray-500">Beyond Class</p>
               </div>
             </div>
