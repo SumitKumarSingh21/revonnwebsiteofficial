@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, Bookmark, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, ArrowLeft, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -64,7 +65,6 @@ const Profile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState({
@@ -79,7 +79,6 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
     fetchPosts();
-    fetchSavedPosts();
     fetchBookings();
     fetchReviews();
     fetchStats();
@@ -201,37 +200,6 @@ const Profile = () => {
     }
   };
 
-  const fetchSavedPosts = async () => {
-    if (!isOwnProfile || !user) return;
-
-    try {
-      // Get saved post IDs
-      const { data: savedPostIds, error: savedError } = await supabase
-        .from('saved_posts')
-        .select('post_id')
-        .eq('user_id', user.id);
-
-      if (savedError) throw savedError;
-
-      if (savedPostIds && savedPostIds.length > 0) {
-        // Get the actual posts
-        const postIds = savedPostIds.map((sp: any) => sp.post_id);
-        const { data: postsData, error: postsError } = await supabase
-          .from('posts')
-          .select('*')
-          .in('id', postIds)
-          .order('created_at', { ascending: false });
-
-        if (postsError) throw postsError;
-        setSavedPosts(postsData || []);
-      } else {
-        setSavedPosts([]);
-      }
-    } catch (error: any) {
-      console.error('Error fetching saved posts:', error);
-    }
-  };
-
   const fetchBookings = async () => {
     if (!isOwnProfile || !user) return;
 
@@ -306,7 +274,6 @@ const Profile = () => {
     await Promise.all([
       fetchProfile(),
       fetchPosts(),
-      fetchSavedPosts(),
       fetchBookings(),
       fetchReviews(),
       fetchStats()
@@ -384,17 +351,12 @@ const Profile = () => {
         ? { ...p, comments: newCount }
         : p
     ));
-    setSavedPosts(savedPosts.map(p => 
-      p.id === postId 
-        ? { ...p, comments: newCount }
-        : p
-    ));
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
       </div>
     );
   }
@@ -437,7 +399,7 @@ const Profile = () => {
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
+                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600">
                     <Share className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -543,9 +505,8 @@ const Profile = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="posts">Posts</TabsTrigger>
-            {isOwnProfile && <TabsTrigger value="saved">Saved</TabsTrigger>}
             {isOwnProfile && <TabsTrigger value="bookings">Bookings</TabsTrigger>}
           </TabsList>
           
@@ -560,22 +521,6 @@ const Profile = () => {
               )}
             </div>
           </TabsContent>
-          
-          {isOwnProfile && (
-            <TabsContent value="saved" className="mt-6">
-              <div className="space-y-4">
-                {savedPosts.length > 0 ? (
-                  savedPosts.map(renderPost)
-                ) : (
-                  <div className="text-center py-12">
-                    <Bookmark className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">No saved posts yet.</p>
-                    <p className="text-gray-400 text-sm">Posts you save will appear here.</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          )}
           
           {isOwnProfile && (
             <TabsContent value="bookings" className="mt-6">
