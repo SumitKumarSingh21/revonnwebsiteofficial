@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, Bookmark, ArrowLeft, RefreshCw } from 'lucide-react';
@@ -11,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import CommentsSection from '@/components/CommentsSection';
+import ReviewModal from '@/components/ReviewModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Post {
@@ -42,6 +42,14 @@ interface Booking {
   created_at: string;
 }
 
+interface Review {
+  id: string;
+  booking_id: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+}
+
 interface Profile {
   id: string;
   username: string;
@@ -58,6 +66,7 @@ const Profile = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState({
     posts: 0,
     followers: 0,
@@ -72,14 +81,15 @@ const Profile = () => {
     fetchPosts();
     fetchSavedPosts();
     fetchBookings();
+    fetchReviews();
     fetchStats();
   }, [username, user]);
 
-  // Real-time updates for bookings
+  // Real-time updates for bookings and reviews
   useEffect(() => {
     if (!user || !isOwnProfile) return;
 
-    const channel = supabase
+    const bookingsChannel = supabase
       .channel('profile-bookings')
       .on(
         'postgres_changes',
@@ -95,8 +105,25 @@ const Profile = () => {
       )
       .subscribe();
 
+    const reviewsChannel = supabase
+      .channel('profile-reviews')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'reviews',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchReviews();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(bookingsChannel);
+      supabase.removeChannel(reviewsChannel);
     };
   }, [user, isOwnProfile]);
 
@@ -179,7 +206,7 @@ const Profile = () => {
 
     try {
       // Get saved post IDs
-      const { data: savedPostIds, error: savedError } = await (supabase as any)
+      const { data: savedPostIds, error: savedError } = await supabase
         .from('saved_posts')
         .select('post_id')
         .eq('user_id', user.id);
@@ -219,6 +246,23 @@ const Profile = () => {
       setBookings(data || []);
     } catch (error: any) {
       console.error('Error fetching bookings:', error);
+    }
+  };
+
+  const fetchReviews = async () => {
+    if (!isOwnProfile || !user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setReviews(data || []);
+    } catch (error: any) {
+      console.error('Error fetching reviews:', error);
     }
   };
 
@@ -264,6 +308,7 @@ const Profile = () => {
       fetchPosts(),
       fetchSavedPosts(),
       fetchBookings(),
+      fetchReviews(),
       fetchStats()
     ]);
     setRefreshing(false);
@@ -271,6 +316,15 @@ const Profile = () => {
       title: "Refreshed",
       description: "Profile data has been updated.",
     });
+  };
+
+  const handleReviewSubmitted = () => {
+    fetchReviews();
+    fetchBookings();
+  };
+
+  const getReviewForBooking = (bookingId: string) => {
+    return reviews.find(review => review.booking_id === bookingId);
   };
 
   const handleShare = async (post: Post, platform?: string) => {
@@ -527,35 +581,46 @@ const Profile = () => {
             <TabsContent value="bookings" className="mt-6">
               <div className="space-y-4">
                 {bookings.length > 0 ? (
-                  bookings.map((booking) => (
-                    <Card key={booking.id}>
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="font-semibold">Service Booking</h3>
-                            <p className="text-gray-600">
-                              {booking.vehicle_make} {booking.vehicle_model}
-                            </p>
-                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
-                              <span>📅 {new Date(booking.booking_date).toLocaleDateString()}</span>
-                              <span>🕐 {booking.booking_time}</span>
+                  bookings.map((booking) => {
+                    const existingReview = getReviewForBooking(booking.id);
+                    
+                    return (
+                      <Card key={booking.id}>
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h3 className="font-semibold">Service Booking</h3>
+                              <p className="text-gray-600">
+                                {booking.vehicle_make} {booking.vehicle_model}
+                              </p>
+                              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
+                                <span>📅 {new Date(booking.booking_date).toLocaleDateString()}</span>
+                                <span>🕐 {booking.booking_time}</span>
+                              </div>
+                              {booking.notes && (
+                                <p className="text-gray-600 text-sm mt-2">{booking.notes}</p>
+                              )}
                             </div>
-                            {booking.notes && (
-                              <p className="text-gray-600 text-sm mt-2">{booking.notes}</p>
-                            )}
-                          </div>
-                          <div className="text-right">
-                            <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
-                              {booking.status}
-                            </Badge>
-                            <div className="font-bold text-lg mt-1">
-                              ₹{booking.total_amount}
+                            <div className="text-right flex flex-col items-end space-y-2">
+                              <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
+                                {booking.status}
+                              </Badge>
+                              <div className="font-bold text-lg">
+                                ₹{booking.total_amount}
+                              </div>
+                              {booking.status === 'confirmed' && (
+                                <ReviewModal
+                                  booking={booking}
+                                  existingReview={existingReview}
+                                  onReviewSubmitted={handleReviewSubmitted}
+                                />
+                              )}
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
+                        </CardContent>
+                      </Card>
+                    );
+                  })
                 ) : (
                   <div className="text-center py-12">
                     <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-4" />
