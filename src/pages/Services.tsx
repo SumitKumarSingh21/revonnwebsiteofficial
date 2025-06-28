@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Star, Search, Filter, ArrowLeft } from 'lucide-react';
@@ -15,8 +16,9 @@ interface Garage {
   location: string;
   rating: number;
   services: string[];
-  price_range: string;
   image_url?: string;
+  average_rating: number;
+  total_reviews: number;
 }
 
 const Services = () => {
@@ -130,7 +132,7 @@ const Services = () => {
                     </div>
                     <div className="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
                       <Star className="h-4 w-4 text-yellow-500 mr-1 fill-current" />
-                      <span className="text-sm font-medium">{garage.rating}</span>
+                      <span className="text-sm font-medium">{garage.average_rating || garage.rating}</span>
                     </div>
                   </div>
                 </CardHeader>
@@ -138,12 +140,12 @@ const Services = () => {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
-                      {garage.services.slice(0, 3).map((service, index) => (
+                      {garage.services?.slice(0, 3).map((service, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
                           {service}
                         </Badge>
                       ))}
-                      {garage.services.length > 3 && (
+                      {garage.services && garage.services.length > 3 && (
                         <Badge variant="outline" className="text-xs">
                           +{garage.services.length - 3} more
                         </Badge>
@@ -152,7 +154,7 @@ const Services = () => {
                     
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">
-                        Starting from <span className="font-semibold text-green-600">{garage.price_range}</span>
+                        <span className="font-semibold text-green-600">{garage.total_reviews || 0} reviews</span>
                       </span>
                       <Button 
                         size="sm" 
