@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, ArrowLeft, RefreshCw, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -65,6 +64,7 @@ const Profile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [savedPosts, setSavedPosts] = useState<Post[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState({
@@ -79,12 +79,13 @@ const Profile = () => {
   useEffect(() => {
     fetchProfile();
     fetchPosts();
+    fetchSavedPosts();
     fetchBookings();
     fetchReviews();
     fetchStats();
   }, [username, user]);
 
-  // Real-time updates for bookings and reviews
+  // Real-time updates for bookings, reviews, and saved posts
   useEffect(() => {
     if (!user || !isOwnProfile) return;
 
@@ -120,9 +121,26 @@ const Profile = () => {
       )
       .subscribe();
 
+    const savedPostsChannel = supabase
+      .channel('profile-saved-posts')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'saved_posts',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          fetchSavedPosts();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(bookingsChannel);
       supabase.removeChannel(reviewsChannel);
+      supabase.removeChannel(savedPostsChannel);
     };
   }, [user, isOwnProfile]);
 
@@ -200,6 +218,37 @@ const Profile = () => {
     }
   };
 
+  const fetchSavedPosts = async () => {
+    if (!isOwnProfile || !user) return;
+
+    try {
+      // Get saved post IDs
+      const { data: savedPostIds, error: savedError } = await supabase
+        .from('saved_posts')
+        .select('post_id')
+        .eq('user_id', user.id);
+
+      if (savedError) throw savedError;
+
+      if (savedPostIds && savedPostIds.length > 0) {
+        // Get the actual posts
+        const postIds = savedPostIds.map((sp: any) => sp.post_id);
+        const { data: postsData, error: postsError } = await supabase
+          .from('posts')
+          .select('*')
+          .in('id', postIds)
+          .order('created_at', { ascending: false });
+
+        if (postsError) throw postsError;
+        setSavedPosts(postsData || []);
+      } else {
+        setSavedPosts([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching saved posts:', error);
+    }
+  };
+
   const fetchBookings = async () => {
     if (!isOwnProfile || !user) return;
 
@@ -274,6 +323,7 @@ const Profile = () => {
     await Promise.all([
       fetchProfile(),
       fetchPosts(),
+      fetchSavedPosts(),
       fetchBookings(),
       fetchReviews(),
       fetchStats()
@@ -292,6 +342,66 @@ const Profile = () => {
 
   const getReviewForBooking = (bookingId: string) => {
     return reviews.find(review => review.booking_id === bookingId);
+  };
+
+  const handleSavePost = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('saved_posts')
+        .insert({
+          user_id: user.id,
+          post_id: postId
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Post Saved",
+        description: "Post has been saved to your collection.",
+      });
+    } catch (error: any) {
+      if (error.code === '23505') {
+        toast({
+          title: "Already Saved",
+          description: "This post is already in your saved collection.",
+        });
+      } else {
+        console.error('Error saving post:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save post.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleUnsavePost = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('saved_posts')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('post_id', postId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Post Unsaved",
+        description: "Post has been removed from your collection.",
+      });
+    } catch (error: any) {
+      console.error('Error unsaving post:', error);
+      toast({
+        title: "Error",
+        description: "Failed to unsave post.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleShare = async (post: Post, platform?: string) => {
@@ -351,6 +461,11 @@ const Profile = () => {
         ? { ...p, comments: newCount }
         : p
     ));
+    setSavedPosts(savedPosts.map(p => 
+      p.id === postId 
+        ? { ...p, comments: newCount }
+        : p
+    ));
   };
 
   if (loading) {
@@ -396,6 +511,91 @@ const Profile = () => {
               <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600">
                 <Heart className="h-4 w-4 mr-2" />
                 {post.likes}
+              </Button>
+              {isOwnProfile && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-gray-500 hover:text-red-600"
+                  onClick={() => handleSavePost(post.id)}
+                >
+                  <Bookmark className="h-4 w-4" />
+                </Button>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600">
+                    <Share className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleShare(post, 'twitter')}>
+                    Share on Twitter
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post, 'facebook')}>
+                    Share on Facebook
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post, 'whatsapp')}>
+                    Share on WhatsApp
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post, 'linkedin')}>
+                    Share on LinkedIn
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleShare(post)}>
+                    Copy Link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const renderSavedPost = (post: Post) => (
+    <Card key={post.id} className="hover:shadow-md transition-shadow">
+      <CardContent className="p-4">
+        <div className="flex space-x-3">
+          <Avatar>
+            <AvatarFallback>{post.username.charAt(0).toUpperCase()}</AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="font-semibold">{post.username}</span>
+                <span className="text-gray-400">·</span>
+                <span className="text-gray-500 text-sm">
+                  {new Date(post.created_at).toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+            
+            <div className="mt-2">
+              <p className="text-gray-900 whitespace-pre-wrap">{post.caption}</p>
+              {post.post_image && (
+                <img src={post.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
+              )}
+            </div>
+            
+            <div className="flex items-center justify-between mt-4 max-w-md">
+              <CommentsSection 
+                postId={post.id}
+                commentsCount={post.comments}
+                onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
+              />
+              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600">
+                <Heart className="h-4 w-4 mr-2" />
+                {post.likes}
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-red-500 hover:text-red-600"
+                onClick={() => handleUnsavePost(post.id)}
+              >
+                <Bookmark className="h-4 w-4 fill-current" />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -505,8 +705,9 @@ const Profile = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="posts" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="posts">Posts</TabsTrigger>
+            {isOwnProfile && <TabsTrigger value="saved">Saved</TabsTrigger>}
             {isOwnProfile && <TabsTrigger value="bookings">Bookings</TabsTrigger>}
           </TabsList>
           
@@ -521,6 +722,22 @@ const Profile = () => {
               )}
             </div>
           </TabsContent>
+          
+          {isOwnProfile && (
+            <TabsContent value="saved" className="mt-6">
+              <div className="space-y-4">
+                {savedPosts.length > 0 ? (
+                  savedPosts.map(renderSavedPost)
+                ) : (
+                  <div className="text-center py-12">
+                    <Bookmark className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No saved posts yet.</p>
+                    <p className="text-gray-400 text-sm">Posts you save will appear here.</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
           
           {isOwnProfile && (
             <TabsContent value="bookings" className="mt-6">

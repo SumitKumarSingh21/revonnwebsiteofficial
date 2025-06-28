@@ -38,8 +38,9 @@ const BookingPage = () => {
   
   const [formData, setFormData] = useState({
     garageName: '',
-    carBrand: '',
-    carModel: '',
+    vehicleType: 'car',
+    vehicleBrand: '',
+    vehicleModel: '',
     serviceDate: '',
     serviceTime: '',
     services: [],
@@ -54,6 +55,18 @@ const BookingPage = () => {
     'Tata': ['Nexon', 'Harrier', 'Safari', 'Altroz', 'Punch'],
     'Honda': ['City', 'Amaze', 'Jazz', 'WR-V', 'CR-V'],
     'Toyota': ['Innova', 'Fortuner', 'Yaris', 'Glanza', 'Urban Cruiser']
+  };
+
+  const bikeBrands = ['Honda', 'Hero', 'Bajaj', 'TVS', 'Yamaha', 'Royal Enfield', 'KTM', 'Suzuki'];
+  const bikeModels = {
+    'Honda': ['Activa', 'CB Shine', 'Unicorn', 'Hornet', 'CBR'],
+    'Hero': ['Splendor', 'HF Deluxe', 'Passion', 'Xtreme', 'Destini'],
+    'Bajaj': ['Pulsar', 'Platina', 'Avenger', 'Dominar', 'CT'],
+    'TVS': ['Apache', 'Jupiter', 'Star City', 'Ntorq', 'Radeon'],
+    'Yamaha': ['FZ', 'R15', 'MT', 'Fascino', 'Ray ZR'],
+    'Royal Enfield': ['Classic', 'Bullet', 'Himalayan', 'Interceptor', 'Continental GT'],
+    'KTM': ['Duke', 'RC', 'Adventure'],
+    'Suzuki': ['Gixxer', 'Access', 'Intruder', 'Hayabusa']
   };
 
   const timeSlots = [
@@ -131,6 +144,23 @@ const BookingPage = () => {
     }, 0);
   };
 
+  const handleVehicleTypeChange = (type: string) => {
+    setFormData({
+      ...formData,
+      vehicleType: type,
+      vehicleBrand: '',
+      vehicleModel: ''
+    });
+  };
+
+  const handleVehicleBrandChange = (brand: string) => {
+    setFormData({
+      ...formData,
+      vehicleBrand: brand,
+      vehicleModel: ''
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -143,7 +173,7 @@ const BookingPage = () => {
       return;
     }
     
-    if (!formData.carBrand || !formData.carModel || !formData.serviceDate || !formData.serviceTime || formData.services.length === 0) {
+    if (!formData.vehicleBrand || !formData.vehicleModel || !formData.serviceDate || !formData.serviceTime || formData.services.length === 0) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields and select at least one service.",
@@ -167,8 +197,9 @@ const BookingPage = () => {
           service_id: primaryServiceId,
           booking_date: formData.serviceDate,
           booking_time: formData.serviceTime,
-          vehicle_make: formData.carBrand,
-          vehicle_model: formData.carModel,
+          vehicle_make: formData.vehicleBrand,
+          vehicle_model: formData.vehicleModel,
+          vehicle_type: formData.vehicleType,
           total_amount: calculateTotal(),
           notes: formData.notes || null,
           customer_name: user.email?.split('@')[0] || 'Customer',
@@ -227,6 +258,11 @@ const BookingPage = () => {
     );
   }
 
+  const currentBrands = formData.vehicleType === 'car' ? carBrands : bikeBrands;
+  const currentModels = formData.vehicleType === 'car' 
+    ? carModels[formData.vehicleBrand] || [] 
+    : bikeModels[formData.vehicleBrand] || [];
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       {/* Header */}
@@ -272,31 +308,52 @@ const BookingPage = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Car Details</CardTitle>
+                  <CardTitle>Vehicle Details</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="vehicle-type">Vehicle Type *</Label>
+                    <Select value={formData.vehicleType} onValueChange={handleVehicleTypeChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select vehicle type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="car">Car</SelectItem>
+                        <SelectItem value="bike">Bike</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="car-brand">Car Brand *</Label>
-                      <Select value={formData.carBrand} onValueChange={(value) => setFormData({...formData, carBrand: value, carModel: ''})}>
+                      <Label htmlFor="vehicle-brand">
+                        {formData.vehicleType === 'car' ? 'Car Brand' : 'Bike Brand'} *
+                      </Label>
+                      <Select value={formData.vehicleBrand} onValueChange={handleVehicleBrandChange}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select brand" />
                         </SelectTrigger>
                         <SelectContent>
-                          {carBrands.map(brand => (
+                          {currentBrands.map(brand => (
                             <SelectItem key={brand} value={brand}>{brand}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="car-model">Car Model *</Label>
-                      <Select value={formData.carModel} onValueChange={(value) => setFormData({...formData, carModel: value})} disabled={!formData.carBrand}>
+                      <Label htmlFor="vehicle-model">
+                        {formData.vehicleType === 'car' ? 'Car Model' : 'Bike Model'} *
+                      </Label>
+                      <Select 
+                        value={formData.vehicleModel} 
+                        onValueChange={(value) => setFormData({...formData, vehicleModel: value})} 
+                        disabled={!formData.vehicleBrand}
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder="Select model" />
                         </SelectTrigger>
                         <SelectContent>
-                          {formData.carBrand && carModels[formData.carBrand]?.map(model => (
+                          {currentModels.map(model => (
                             <SelectItem key={model} value={model}>{model}</SelectItem>
                           ))}
                         </SelectContent>
@@ -407,10 +464,12 @@ const BookingPage = () => {
                       <span>Garage:</span>
                       <span className="font-medium">{formData.garageName}</span>
                     </div>
-                    {formData.carBrand && formData.carModel && (
+                    {formData.vehicleBrand && formData.vehicleModel && (
                       <div className="flex justify-between text-sm">
                         <span>Vehicle:</span>
-                        <span className="font-medium">{formData.carBrand} {formData.carModel}</span>
+                        <span className="font-medium">
+                          {formData.vehicleBrand} {formData.vehicleModel} ({formData.vehicleType})
+                        </span>
                       </div>
                     )}
                     {formData.serviceDate && (
