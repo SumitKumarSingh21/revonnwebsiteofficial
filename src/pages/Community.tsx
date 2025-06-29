@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Heart, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
@@ -12,7 +13,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import CommentsSection from '@/components/CommentsSection';
-import PageHeader from '@/components/PageHeader';
 
 interface Post {
   id: string;
@@ -86,7 +86,7 @@ const Community = () => {
 
       // Check which posts are saved by current user
       if (user) {
-        const { data: savedPosts } = await (supabase as any)
+        const { data: savedPosts } = await supabase
           .from('saved_posts')
           .select('post_id')
           .eq('user_id', user.id);
@@ -200,7 +200,7 @@ const Community = () => {
 
       if (post.is_saved) {
         // Unsave post
-        await (supabase as any)
+        await supabase
           .from('saved_posts')
           .delete()
           .eq('user_id', user.id)
@@ -212,7 +212,7 @@ const Community = () => {
         });
       } else {
         // Save post
-        await (supabase as any)
+        await supabase
           .from('saved_posts')
           .insert({
             user_id: user.id,
@@ -319,31 +319,43 @@ const Community = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
-      {/* Header */}
-      <PageHeader 
-        title="Community" 
-        showBackButton={false}
-      />
+      {/* Fixed Header */}
+      <div className="bg-white shadow-sm sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16">
+            <div className="flex items-center space-x-3 flex-1">
+              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-8 w-8" />
+              <div className="flex-1">
+                <h1 className="text-xl font-bold text-red-600">Revonn</h1>
+                <p className="text-xs text-gray-500">Beyond Class</p>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Community</h2>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Action Bar */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b sticky top-16 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-          <div className="flex items-center justify-end space-x-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/notifications">
-                <Bell className="h-5 w-5" />
-              </Link>
-            </Button>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/notifications">
+                  <Bell className="h-5 w-5" />
+                </Link>
+              </Button>
+            </div>
             <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
               <DialogTrigger asChild>
-                <Button size="sm">
+                <Button size="sm" className="bg-red-600 hover:bg-red-700">
                   <Plus className="h-4 w-4 mr-2" />
                   Post
                 </Button>
@@ -396,7 +408,7 @@ const Community = () => {
                         </Button>
                       </label>
                     </div>
-                    <Button onClick={handleCreatePost} disabled={!newPost.trim()}>
+                    <Button onClick={handleCreatePost} disabled={!newPost.trim()} className="bg-red-600 hover:bg-red-700">
                       Post
                     </Button>
                   </div>
@@ -408,7 +420,7 @@ const Community = () => {
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b sticky top-28 z-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -445,106 +457,93 @@ const Community = () => {
               ) : (
                 <Card key={item.id} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
-                    <div className="flex space-x-3">
-                      <Avatar>
-                        <AvatarFallback>{item.username.charAt(0).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center space-x-2">
-                            <Link to={`/profile/${item.username}`} className="font-semibold hover:underline">
-                              {item.username}
-                            </Link>
-                            <span className="text-gray-400">·</span>
-                            <span className="text-gray-500 text-sm">
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </span>
+                    <div className="space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <Avatar>
+                          <AvatarFallback>{item.username.charAt(0).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2 min-w-0">
+                              <Link to={`/profile/${item.username}`} className="font-semibold hover:underline truncate">
+                                {item.username}
+                              </Link>
+                              <span className="text-gray-400">·</span>
+                              <span className="text-gray-500 text-sm truncate">
+                                {new Date(item.created_at).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="flex-shrink-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleSavePost(item.id)}>
+                                  <Bookmark className={`h-4 w-4 mr-2 ${item.is_saved ? 'fill-current' : ''}`} />
+                                  {item.is_saved ? 'Unsave Post' : 'Save Post'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
+                                  Copy Link
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleSavePost(item.id)}>
-                                <Bookmark className={`h-4 w-4 mr-2 ${item.is_saved ? 'fill-current' : ''}`} />
-                                {item.is_saved ? 'Unsave Post' : 'Save Post'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'twitter')}>
-                                Share on Twitter
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'facebook')}>
-                                Share on Facebook
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'whatsapp')}>
-                                Share on WhatsApp
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'linkedin')}>
-                                Share on LinkedIn
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
-                                Copy Link
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                        
-                        <div className="mt-2">
-                          <p className="text-gray-900 whitespace-pre-wrap">{item.caption}</p>
-                          {item.post_image && (
-                            <img src={item.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center justify-between mt-4 max-w-md">
-                          <CommentsSection 
-                            postId={item.id}
-                            commentsCount={item.comments}
-                            onCommentsUpdate={(count) => handleCommentsUpdate(item.id, count)}
-                          />
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-gray-500 hover:text-green-600"
-                          >
-                            <Repeat2 className="h-4 w-4 mr-2" />
-                            0
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-gray-500 hover:text-red-600"
-                            onClick={() => handlePostInteraction(item.id, 'like')}
-                          >
-                            <Heart className="h-4 w-4 mr-2" />
-                            {item.likes}
-                          </Button>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
-                                <Share className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'twitter')}>
-                                Share on Twitter
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'facebook')}>
-                                Share on Facebook
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'whatsapp')}>
-                                Share on WhatsApp
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id, 'linkedin')}>
-                                Share on LinkedIn
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
-                                Copy Link
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          
+                          <div className="mt-2">
+                            <p className="text-gray-900 whitespace-pre-wrap break-words">{item.caption}</p>
+                            {item.post_image && (
+                              <img src={item.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-4 pt-2 border-t">
+                            <CommentsSection 
+                              postId={item.id}
+                              commentsCount={item.comments}
+                              onCommentsUpdate={(count) => handleCommentsUpdate(item.id, count)}
+                            />
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-gray-500 hover:text-green-600"
+                            >
+                              <Repeat2 className="h-4 w-4 mr-2" />
+                              0
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-gray-500 hover:text-red-600"
+                              onClick={() => handlePostInteraction(item.id, 'like')}
+                            >
+                              <Heart className="h-4 w-4 mr-2" />
+                              {item.likes}
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
+                                  <Share className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleSharePost(item.id, 'twitter')}>
+                                  Share on Twitter
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSharePost(item.id, 'facebook')}>
+                                  Share on Facebook
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSharePost(item.id, 'whatsapp')}>
+                                  Share on WhatsApp
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
+                                  Copy Link
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </div>
                     </div>

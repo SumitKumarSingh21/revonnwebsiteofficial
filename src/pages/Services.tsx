@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Star, Search, Filter, ArrowLeft, Car, Bike } from 'lucide-react';
@@ -9,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import PageHeader from '@/components/PageHeader';
 
 interface Garage {
   id: string;
@@ -88,45 +86,60 @@ const Services = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
-      {/* Header */}
-      <PageHeader 
-        title="Vehicle Services" 
-        backTo="/"
-      />
+      {/* Fixed Header */}
+      <div className="bg-white shadow-sm sticky top-0 z-40">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16">
+            <Button variant="ghost" size="sm" asChild className="mr-2">
+              <Link to="/">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="flex items-center space-x-3 flex-1">
+              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-8 w-8" />
+              <div className="flex-1">
+                <h1 className="text-xl font-bold text-red-600">Revonn</h1>
+                <p className="text-xs text-gray-500">Beyond Class</p>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Vehicle Services</h2>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Service Type Selection */}
       <div className="bg-white border-b">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex space-x-2">
+          <div className="grid grid-cols-3 gap-2">
             <Button
               variant={serviceType === 'all' ? 'default' : 'outline'}
               onClick={() => setServiceType('all')}
-              className={serviceType === 'all' ? 'bg-red-600 hover:bg-red-700' : ''}
+              className={`w-full text-sm ${serviceType === 'all' ? 'bg-red-600 hover:bg-red-700' : ''}`}
             >
               All Services
             </Button>
             <Button
               variant={serviceType === 'car' ? 'default' : 'outline'}
               onClick={() => setServiceType('car')}
-              className={serviceType === 'car' ? 'bg-red-600 hover:bg-red-700' : ''}
+              className={`w-full text-sm ${serviceType === 'car' ? 'bg-red-600 hover:bg-red-700' : ''}`}
             >
-              <Car className="h-4 w-4 mr-2" />
-              Car Services
+              <Car className="h-4 w-4 mr-1" />
+              Car
             </Button>
             <Button
               variant={serviceType === 'bike' ? 'default' : 'outline'}
               onClick={() => setServiceType('bike')}
-              className={serviceType === 'bike' ? 'bg-red-600 hover:bg-red-700' : ''}
+              className={`w-full text-sm ${serviceType === 'bike' ? 'bg-red-600 hover:bg-red-700' : ''}`}
             >
-              <Bike className="h-4 w-4 mr-2" />
-              Bike Services
+              <Bike className="h-4 w-4 mr-1" />
+              Bike
             </Button>
           </div>
         </div>
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white border-b sticky top-16 z-10">
+      <div className="bg-white border-b sticky top-16 z-30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex space-x-2">
             <div className="relative flex-1">
@@ -150,7 +163,7 @@ const Services = () => {
       {/* Available Garages */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Available Service Centers</h2>
+          <h2 className="text-xl font-bold text-gray-900">Available Service Centers</h2>
           <div className="flex items-center text-red-600">
             <MapPin className="h-4 w-4 mr-1" />
             <span className="text-sm">Near you</span>
@@ -158,7 +171,7 @@ const Services = () => {
         </div>
 
         {filteredGarages.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-4">
             {filteredGarages.map((garage) => (
               <Card key={garage.id} className="hover:shadow-lg transition-shadow cursor-pointer group">
                 <div className="aspect-video bg-gradient-to-r from-red-100 to-red-200 rounded-t-lg flex items-center justify-center">
@@ -169,9 +182,9 @@ const Services = () => {
                   )}
                 </div>
                 
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
-                    <div>
+                    <div className="flex-1">
                       <CardTitle className="text-lg group-hover:text-red-600 transition-colors">
                         {garage.name}
                       </CardTitle>
@@ -187,7 +200,7 @@ const Services = () => {
                   </div>
                 </CardHeader>
                 
-                <CardContent>
+                <CardContent className="pt-0">
                   <div className="space-y-3">
                     <div className="flex flex-wrap gap-2">
                       {garage.services?.slice(0, 3).map((service, index) => (
