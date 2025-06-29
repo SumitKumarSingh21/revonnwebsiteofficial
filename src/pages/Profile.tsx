@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, ArrowLeft, RefreshCw, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
@@ -11,6 +12,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import CommentsSection from '@/components/CommentsSection';
 import ReviewModal from '@/components/ReviewModal';
+import ProfilePictureUpload from '@/components/ProfilePictureUpload';
+import FollowButton from '@/components/FollowButton';
+import LikeButton from '@/components/LikeButton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Post {
@@ -468,6 +472,16 @@ const Profile = () => {
     ));
   };
 
+  const handleAvatarUpdate = (url: string) => {
+    if (profile) {
+      setProfile({ ...profile, avatar_url: url });
+    }
+  };
+
+  const handleFollowChange = (isFollowing: boolean, followerCount: number) => {
+    setStats(prev => ({ ...prev, followers: followerCount }));
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
@@ -508,10 +522,15 @@ const Profile = () => {
                 commentsCount={post.comments}
                 onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
               />
-              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600">
-                <Heart className="h-4 w-4 mr-2" />
-                {post.likes}
-              </Button>
+              <LikeButton 
+                postId={post.id}
+                initialLikes={post.likes}
+                onLikeChange={(newCount) => {
+                  setPosts(posts.map(p => 
+                    p.id === post.id ? { ...p, likes: newCount } : p
+                  ));
+                }}
+              />
               {isOwnProfile && (
                 <Button 
                   variant="ghost" 
@@ -585,10 +604,15 @@ const Profile = () => {
                 commentsCount={post.comments}
                 onCommentsUpdate={(count) => handleCommentsUpdate(post.id, count)}
               />
-              <Button variant="ghost" size="sm" className="text-gray-500 hover:text-red-600">
-                <Heart className="h-4 w-4 mr-2" />
-                {post.likes}
-              </Button>
+              <LikeButton 
+                postId={post.id}
+                initialLikes={post.likes}
+                onLikeChange={(newCount) => {
+                  setSavedPosts(savedPosts.map(p => 
+                    p.id === post.id ? { ...p, likes: newCount } : p
+                  ));
+                }}
+              />
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -662,17 +686,36 @@ const Profile = () => {
         <Card className="mb-6">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
-              <Avatar className="h-20 w-20">
-                <AvatarFallback className="text-2xl">
-                  {profile?.full_name?.charAt(0) || profile?.username?.charAt(0) || 'U'}
-                </AvatarFallback>
-              </Avatar>
+              {isOwnProfile ? (
+                <ProfilePictureUpload
+                  currentAvatarUrl={profile?.avatar_url}
+                  onAvatarUpdate={handleAvatarUpdate}
+                />
+              ) : (
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={profile?.avatar_url} />
+                  <AvatarFallback className="text-2xl">
+                    {profile?.full_name?.charAt(0) || profile?.username?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               
               <div className="flex-1">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {profile?.full_name || profile?.username || 'User'}
-                </h1>
-                <p className="text-gray-600">@{profile?.username || 'user'}</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                      {profile?.full_name || profile?.username || 'User'}
+                    </h1>
+                    <p className="text-gray-600">@{profile?.username || 'user'}</p>
+                  </div>
+                  {!isOwnProfile && profile && (
+                    <FollowButton 
+                      targetUserId={profile.id} 
+                      onFollowChange={handleFollowChange}
+                    />
+                  )}
+                </div>
+
                 {profile?.bio && (
                   <p className="text-gray-700 mt-2">{profile.bio}</p>
                 )}
