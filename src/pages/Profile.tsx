@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, ArrowLeft, RefreshCw, Bookmark } from 'lucide-react';
@@ -15,6 +14,8 @@ import ReviewModal from '@/components/ReviewModal';
 import ProfilePictureUpload from '@/components/ProfilePictureUpload';
 import FollowButton from '@/components/FollowButton';
 import LikeButton from '@/components/LikeButton';
+import FollowersList from '@/components/FollowersList';
+import FollowingList from '@/components/FollowingList';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Post {
@@ -312,8 +313,7 @@ const Profile = () => {
 
       setStats({
         posts: postsCount || 0,
-        followers: followersCount || 0,
-        following: followingCount || 0
+        followers: followersCount || 0
       });
     } catch (error: any) {
       console.error('Error fetching stats:', error);
@@ -482,14 +482,6 @@ const Profile = () => {
     setStats(prev => ({ ...prev, followers: followerCount }));
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-      </div>
-    );
-  }
-
   const renderPost = (post: Post) => (
     <Card key={post.id} className="hover:shadow-md transition-shadow">
       <CardContent className="p-4">
@@ -652,6 +644,14 @@ const Profile = () => {
     </Card>
   );
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
       {/* Header */}
@@ -732,14 +732,16 @@ const Profile = () => {
                     <div className="font-bold text-lg">{stats.posts}</div>
                     <div className="text-gray-500 text-sm">Posts</div>
                   </div>
-                  <div className="text-center">
-                    <div className="font-bold text-lg">{stats.followers}</div>
-                    <div className="text-gray-500 text-sm">Followers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="font-bold text-lg">{stats.following}</div>
-                    <div className="text-gray-500 text-sm">Following</div>
-                  </div>
+                  <FollowersList 
+                    userId={profile?.id || user?.id || ''} 
+                    count={stats.followers} 
+                    isOwnProfile={isOwnProfile}
+                  />
+                  <FollowingList 
+                    userId={profile?.id || user?.id || ''} 
+                    count={stats.following} 
+                    isOwnProfile={isOwnProfile}
+                  />
                 </div>
               </div>
             </div>

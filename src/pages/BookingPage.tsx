@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, Car, FileText, CreditCard } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, Car, FileText, CreditCard, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -45,7 +45,7 @@ const BookingPage = () => {
     serviceTime: '',
     services: [],
     notes: '',
-    paymentOption: 'pay-later'
+    mobileNumber: ''
   });
 
   const carBrands = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Honda', 'Toyota', 'Ford', 'Volkswagen'];
@@ -173,10 +173,21 @@ const BookingPage = () => {
       return;
     }
     
-    if (!formData.vehicleBrand || !formData.vehicleModel || !formData.serviceDate || !formData.serviceTime || formData.services.length === 0) {
+    if (!formData.vehicleBrand || !formData.vehicleModel || !formData.serviceDate || !formData.serviceTime || formData.services.length === 0 || !formData.mobileNumber) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields and select at least one service.",
+        description: "Please fill in all required fields including mobile number and select at least one service.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate mobile number (basic validation for 10 digits)
+    const mobileRegex = /^[0-9]{10}$/;
+    if (!mobileRegex.test(formData.mobileNumber)) {
+      toast({
+        title: "Invalid Mobile Number",
+        description: "Please enter a valid 10-digit mobile number.",
         variant: "destructive"
       });
       return;
@@ -204,7 +215,8 @@ const BookingPage = () => {
           notes: formData.notes || null,
           customer_name: user.email?.split('@')[0] || 'Customer',
           customer_email: user.email || '',
-          payment_method: formData.paymentOption,
+          customer_phone: formData.mobileNumber,
+          payment_method: 'pay-later',
           status: 'confirmed'
         })
         .select()
@@ -302,6 +314,29 @@ const BookingPage = () => {
                       disabled
                       className="bg-gray-100"
                     />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Contact Information</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div>
+                    <Label htmlFor="mobile-number">Mobile Number *</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        id="mobile-number"
+                        type="tel"
+                        placeholder="Enter 10-digit mobile number"
+                        value={formData.mobileNumber}
+                        onChange={(e) => setFormData({...formData, mobileNumber: e.target.value})}
+                        className="pl-10"
+                        maxLength={10}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -464,6 +499,12 @@ const BookingPage = () => {
                       <span>Garage:</span>
                       <span className="font-medium">{formData.garageName}</span>
                     </div>
+                    {formData.mobileNumber && (
+                      <div className="flex justify-between text-sm">
+                        <span>Mobile:</span>
+                        <span className="font-medium">{formData.mobileNumber}</span>
+                      </div>
+                    )}
                     {formData.vehicleBrand && formData.vehicleModel && (
                       <div className="flex justify-between text-sm">
                         <span>Vehicle:</span>
@@ -512,31 +553,9 @@ const BookingPage = () => {
                     </>
                   )}
 
-                  <div className="space-y-3">
-                    <Label>Payment Option</Label>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="pay-later"
-                          name="payment"
-                          value="pay-later"
-                          checked={formData.paymentOption === 'pay-later'}
-                          onChange={(e) => setFormData({...formData, paymentOption: e.target.value})}
-                        />
-                        <Label htmlFor="pay-later" className="cursor-pointer">Pay after service</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="radio"
-                          id="pay-now"
-                          name="payment"
-                          value="pay-now"
-                          checked={formData.paymentOption === 'pay-now'}
-                          onChange={(e) => setFormData({...formData, paymentOption: e.target.value})}
-                        />
-                        <Label htmlFor="pay-now" className="cursor-pointer">Pay now (5% discount)</Label>
-                      </div>
+                  <div className="border-t pt-4">
+                    <div className="text-sm text-gray-600 mb-4">
+                      <strong>Payment:</strong> Pay after service completion
                     </div>
                   </div>
 
