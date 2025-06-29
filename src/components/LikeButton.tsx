@@ -29,7 +29,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
 
     try {
       const { data, error } = await supabase
-        .from('likes')
+        .from('likes' as any)
         .select('id')
         .eq('post_id', postId)
         .eq('user_id', user.id)
@@ -58,7 +58,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
       if (isLiked) {
         // Unlike
         const { error } = await supabase
-          .from('likes')
+          .from('likes' as any)
           .delete()
           .eq('post_id', postId)
           .eq('user_id', user.id);
@@ -72,7 +72,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
       } else {
         // Like
         const { error } = await supabase
-          .from('likes')
+          .from('likes' as any)
           .insert({
             post_id: postId,
             user_id: user.id
