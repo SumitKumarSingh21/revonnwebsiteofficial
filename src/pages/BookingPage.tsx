@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, MapPin, Star, Phone, User, Car } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Star, Phone, User, Car, Plus, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,10 @@ interface Service {
   category?: string;
 }
 
+interface SelectedService extends Service {
+  quantity: number;
+}
+
 const BookingPage = () => {
   const { garageId, serviceId } = useParams();
   const navigate = useNavigate();
@@ -39,7 +43,7 @@ const BookingPage = () => {
   
   const [garage, setGarage] = useState<Garage | null>(null);
   const [services, setServices] = useState<Service[]>([]);
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
@@ -66,7 +70,7 @@ const BookingPage = () => {
     if (serviceId && services.length > 0) {
       const service = services.find(s => s.id === serviceId);
       if (service) {
-        setSelectedService(service);
+        setSelectedServices([{ ...service, quantity: 1 }]);
       }
     }
   }, [serviceId, services]);
@@ -110,9 +114,42 @@ const BookingPage = () => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleServiceSelect = (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
-    setSelectedService(service || null);
+  const addService = (service: Service) => {
+    const existingService = selectedServices.find(s => s.id === service.id);
+    if (existingService) {
+      setSelectedServices(prev => 
+        prev.map(s => 
+          s.id === service.id 
+            ? { ...s, quantity: s.quantity + 1 }
+            : s
+        )
+      );
+    } else {
+      setSelectedServices(prev => [...prev, { ...service, quantity: 1 }]);
+    }
+  };
+
+  const removeService = (serviceId: string) => {
+    const existingService = selectedServices.find(s => s.id === serviceId);
+    if (existingService && existingService.quantity > 1) {
+      setSelectedServices(prev => 
+        prev.map(s => 
+          s.id === serviceId 
+            ? { ...s, quantity: s.quantity - 1 }
+            : s
+        )
+      );
+    } else {
+      setSelectedServices(prev => prev.filter(s => s.id !== serviceId));
+    }
+  };
+
+  const getTotalAmount = () => {
+    return selectedServices.reduce((total, service) => total + (service.price * service.quantity), 0);
+  };
+
+  const getTotalDuration = () => {
+    return selectedServices.reduce((total, service) => total + (service.duration * service.quantity), 0);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,10 +164,10 @@ const BookingPage = () => {
       return;
     }
 
-    if (!selectedService) {
+    if (selectedServices.length === 0) {
       toast({
-        title: "Service Required",
-        description: "Please select a service to book.",
+        title: "Services Required",
+        description: "Please select at least one service to book.",
         variant: "destructive",
       });
       return;
@@ -161,30 +198,37 @@ const BookingPage = () => {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: user.id,
-          garage_id: garageId,
-          service_id: selectedService.id,
-          customer_name: formData.customerName,
-          customer_phone: formData.customerPhone,
-          customer_email: formData.customerEmail,
-          vehicle_make: formData.vehicleMake,
-          vehicle_model: formData.vehicleModel,
-          vehicle_type: formData.vehicleType,
-          booking_date: formData.bookingDate,
-          booking_time: formData.bookingTime,
-          total_amount: selectedService.price,
-          notes: formData.notes,
-          status: 'confirmed'
-        });
+      // Create bookings for each selected service
+      const bookingPromises = selectedServices.map(async (service) => {
+        for (let i = 0; i < service.quantity; i++) {
+          const { error } = await supabase
+            .from('bookings')
+            .insert({
+              user_id: user.id,
+              garage_id: garageId,
+              service_id: service.id,
+              customer_name: formData.customerName,
+              customer_phone: formData.customerPhone,
+              customer_email: formData.customerEmail,
+              vehicle_make: formData.vehicleMake,
+              vehicle_model: formData.vehicleModel,
+              vehicle_type: formData.vehicleType,
+              booking_date: formData.bookingDate,
+              booking_time: formData.bookingTime,
+              total_amount: service.price,
+              notes: formData.notes,
+              status: 'confirmed'
+            });
 
-      if (error) throw error;
+          if (error) throw error;
+        }
+      });
+
+      await Promise.all(bookingPromises);
 
       toast({
         title: "Booking Confirmed!",
-        description: "Your service has been booked successfully.",
+        description: `${selectedServices.length} service(s) booked successfully.`,
       });
       
       navigate('/profile');
@@ -276,40 +320,58 @@ const BookingPage = () => {
               </CardHeader>
               <CardContent className="p-4 sm:p-6">
                 <div className="space-y-3">
-                  {services.map((service) => (
-                    <div
-                      key={service.id}
-                      onClick={() => handleServiceSelect(service.id)}
-                      className={`p-3 sm:p-4 border rounded-lg cursor-pointer transition-colors ${
-                        selectedService?.id === service.id
-                          ? 'border-red-500 bg-red-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-gray-900">{service.name}</h3>
-                          {service.description && (
-                            <p className="text-gray-600 text-sm mt-1">{service.description}</p>
-                          )}
-                          <div className="flex items-center space-x-4 mt-2">
-                            <div className="flex items-center text-sm text-gray-500">
-                              <Clock className="h-4 w-4 mr-1" />
-                              {service.duration} min
-                            </div>
-                            {service.category && (
-                              <Badge variant="secondary" className="text-xs">
-                                {service.category}
-                              </Badge>
+                  {services.map((service) => {
+                    const selectedService = selectedServices.find(s => s.id === service.id);
+                    const quantity = selectedService?.quantity || 0;
+
+                    return (
+                      <div
+                        key={service.id}
+                        className="p-3 sm:p-4 border rounded-lg"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-gray-900">{service.name}</h3>
+                            {service.description && (
+                              <p className="text-gray-600 text-sm mt-1">{service.description}</p>
                             )}
+                            <div className="flex items-center space-x-4 mt-2">
+                              <div className="flex items-center text-sm text-gray-500">
+                                <Clock className="h-4 w-4 mr-1" />
+                                {service.duration} min
+                              </div>
+                              {service.category && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {service.category}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-right flex flex-col items-end space-y-2">
+                            <span className="text-lg font-bold text-red-600">₹{service.price}</span>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => removeService(service.id)}
+                                disabled={quantity === 0}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <span className="w-8 text-center font-medium">{quantity}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => addService(service)}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-lg font-bold text-red-600">₹{service.price}</span>
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -458,17 +520,27 @@ const BookingPage = () => {
                   />
                 </div>
 
-                {/* Selected Service Summary */}
-                {selectedService && (
+                {/* Selected Services Summary */}
+                {selectedServices.length > 0 && (
                   <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-semibold text-gray-900 mb-2">Selected Service</h4>
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium">{selectedService.name}</p>
-                        <p className="text-sm text-gray-600">{selectedService.duration} minutes</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-red-600">₹{selectedService.price}</p>
+                    <h4 className="font-semibold text-gray-900 mb-2">Selected Services</h4>
+                    <div className="space-y-2">
+                      {selectedServices.map((service) => (
+                        <div key={service.id} className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{service.name} x{service.quantity}</p>
+                            <p className="text-sm text-gray-600">{service.duration * service.quantity} minutes total</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-red-600">₹{service.price * service.quantity}</p>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="border-t pt-2 mt-2">
+                        <div className="flex justify-between items-center font-bold">
+                          <span>Total ({getTotalDuration()} min)</span>
+                          <span className="text-red-600">₹{getTotalAmount()}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -477,9 +549,9 @@ const BookingPage = () => {
                 <Button
                   type="submit"
                   className="w-full bg-red-600 hover:bg-red-700"
-                  disabled={submitting || !selectedService}
+                  disabled={submitting || selectedServices.length === 0}
                 >
-                  {submitting ? 'Booking...' : 'Confirm Booking'}
+                  {submitting ? 'Booking...' : `Confirm Booking (₹${getTotalAmount()})`}
                 </Button>
               </form>
             </CardContent>
