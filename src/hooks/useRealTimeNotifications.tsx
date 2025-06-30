@@ -58,7 +58,7 @@ export const useRealTimeNotifications = () => {
     if (!user) return;
 
     const channel = supabase
-      .channel('notifications')
+      .channel('user-notifications')
       .on(
         'postgres_changes',
         {
