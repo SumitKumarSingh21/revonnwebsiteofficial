@@ -17,7 +17,7 @@ interface Following {
     username: string;
     full_name: string;
     avatar_url?: string;
-  };
+  } | null;
 }
 
 interface FollowingListProps {
@@ -36,24 +36,35 @@ const FollowingList = ({ userId, count, isOwnProfile }: FollowingListProps) => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First get following
+      const { data: followingData, error: followingError } = await supabase
         .from('followers')
-        .select(`
-          id,
-          following_id,
-          created_at,
-          profiles!followers_following_id_fkey (
-            id,
-            username,
-            full_name,
-            avatar_url
-          )
-        `)
+        .select('id, following_id, created_at')
         .eq('follower_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setFollowing(data || []);
+      if (followingError) throw followingError;
+
+      if (followingData && followingData.length > 0) {
+        // Then get profiles for each following
+        const followingIds = followingData.map(f => f.following_id);
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, full_name, avatar_url')
+          .in('id', followingIds);
+
+        if (profilesError) throw profilesError;
+
+        // Combine the data
+        const followingWithProfiles = followingData.map(follow => ({
+          ...follow,
+          profiles: profilesData?.find(p => p.id === follow.following_id) || null
+        }));
+
+        setFollowing(followingWithProfiles);
+      } else {
+        setFollowing([]);
+      }
     } catch (error: any) {
       console.error('Error fetching following:', error);
       toast({
@@ -134,7 +145,7 @@ const FollowingList = ({ userId, count, isOwnProfile }: FollowingListProps) => {
                     <p className="text-sm text-gray-500">@{follow.profiles?.username}</p>
                   </div>
                 </div>
-                {!isOwnProfile && (
+                {!isOwnProfile && follow.profiles && (
                   <FollowButton targetUserId={follow.following_id} />
                 )}
               </div>

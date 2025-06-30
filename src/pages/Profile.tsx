@@ -313,7 +313,8 @@ const Profile = () => {
 
       setStats({
         posts: postsCount || 0,
-        followers: followersCount || 0
+        followers: followersCount || 0,
+        following: followingCount || 0
       });
     } catch (error: any) {
       console.error('Error fetching stats:', error);
