@@ -480,7 +480,10 @@ const Profile = () => {
   };
 
   const handleFollowChange = (isFollowing: boolean, followerCount: number) => {
-    setStats(prev => ({ ...prev, followers: followerCount }));
+    setStats(prev => ({ 
+      ...prev, 
+      followers: followerCount 
+    }));
   };
 
   const renderPost = (post: Post) => (

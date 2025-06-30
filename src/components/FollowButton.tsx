@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { UserPlus, UserMinus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { UserPlus, UserCheck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
@@ -17,11 +17,13 @@ const FollowButton = ({ targetUserId, onFollowChange }: FollowButtonProps) => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    checkFollowStatus();
-  }, [targetUserId, user]);
+    if (user && targetUserId !== user.id) {
+      checkFollowStatus();
+    }
+  }, [user, targetUserId]);
 
   const checkFollowStatus = async () => {
-    if (!user || user.id === targetUserId) return;
+    if (!user) return;
 
     try {
       const { data, error } = await supabase
@@ -38,11 +40,19 @@ const FollowButton = ({ targetUserId, onFollowChange }: FollowButtonProps) => {
     }
   };
 
-  const handleFollowToggle = async () => {
-    if (!user || user.id === targetUserId) return;
+  const getFollowerCount = async () => {
+    const { count } = await supabase
+      .from('followers')
+      .select('*', { count: 'exact', head: true })
+      .eq('following_id', targetUserId);
+    
+    return count || 0;
+  };
+
+  const handleFollow = async () => {
+    if (!user || targetUserId === user.id) return;
 
     setLoading(true);
-
     try {
       if (isFollowing) {
         // Unfollow
@@ -53,8 +63,11 @@ const FollowButton = ({ targetUserId, onFollowChange }: FollowButtonProps) => {
           .eq('following_id', targetUserId);
 
         if (error) throw error;
-
+        
         setIsFollowing(false);
+        const newCount = await getFollowerCount();
+        onFollowChange?.(false, newCount);
+        
         toast({
           title: "Unfollowed",
           description: "You are no longer following this user.",
@@ -69,26 +82,21 @@ const FollowButton = ({ targetUserId, onFollowChange }: FollowButtonProps) => {
           });
 
         if (error) throw error;
-
+        
         setIsFollowing(true);
+        const newCount = await getFollowerCount();
+        onFollowChange?.(true, newCount);
+        
         toast({
           title: "Following",
           description: "You are now following this user.",
         });
       }
-
-      // Get updated follower count
-      const { count } = await supabase
-        .from('followers')
-        .select('*', { count: 'exact', head: true })
-        .eq('following_id', targetUserId);
-
-      onFollowChange?.(isFollowing, count || 0);
     } catch (error: any) {
-      console.error('Error toggling follow:', error);
+      console.error('Error updating follow status:', error);
       toast({
         title: "Error",
-        description: "Failed to update follow status.",
+        description: "Failed to update follow status",
         variant: "destructive",
       });
     } finally {
@@ -96,23 +104,22 @@ const FollowButton = ({ targetUserId, onFollowChange }: FollowButtonProps) => {
     }
   };
 
-  // Don't show follow button for own profile
-  if (!user || user.id === targetUserId) {
+  if (!user || targetUserId === user.id) {
     return null;
   }
 
   return (
     <Button
-      onClick={handleFollowToggle}
+      onClick={handleFollow}
       disabled={loading}
       variant={isFollowing ? "outline" : "default"}
       size="sm"
-      className={isFollowing ? "" : "bg-red-600 hover:bg-red-700"}
+      className={isFollowing ? "text-gray-600 border-gray-300" : "bg-red-600 hover:bg-red-700"}
     >
       {isFollowing ? (
         <>
-          <UserMinus className="h-4 w-4 mr-2" />
-          Unfollow
+          <UserCheck className="h-4 w-4 mr-2" />
+          Following
         </>
       ) : (
         <>

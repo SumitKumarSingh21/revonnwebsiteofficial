@@ -1,121 +1,89 @@
+
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Clock, Car, FileText, CreditCard, Phone } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Calendar, Clock, Car, User, Phone, MessageSquare, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-
-interface Service {
-  id: string;
-  name: string;
-  price: number;
-  category?: string;
-  duration?: number;
-}
+import PageHeader from '@/components/PageHeader';
 
 interface Garage {
   id: string;
   name: string;
   location: string;
+  services: string[];
+}
+
+interface Service {
+  id: string;
+  name: string;
+  price: number;
+  duration: number;
+  description: string;
 }
 
 const BookingPage = () => {
-  const { garageId } = useParams();
+  const { garageId, serviceId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
   
   const [garage, setGarage] = useState<Garage | null>(null);
-  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   
+  // Form data
   const [formData, setFormData] = useState({
-    garageName: '',
-    vehicleType: 'car',
-    vehicleBrand: '',
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    vehicleMake: '',
     vehicleModel: '',
-    serviceDate: '',
-    serviceTime: '',
-    services: [],
+    vehicleType: 'car',
+    bookingDate: '',
+    bookingTime: '',
     notes: '',
-    mobileNumber: ''
+    paymentMethod: 'pay_after_service'
   });
 
-  const carBrands = ['Maruti Suzuki', 'Hyundai', 'Tata', 'Mahindra', 'Honda', 'Toyota', 'Ford', 'Volkswagen'];
-  const carModels = {
-    'Maruti Suzuki': ['Swift', 'Baleno', 'Dzire', 'Alto', 'Vitara Brezza'],
-    'Hyundai': ['i20', 'Creta', 'Verna', 'Grand i10', 'Venue'],
-    'Tata': ['Nexon', 'Harrier', 'Safari', 'Altroz', 'Punch'],
-    'Honda': ['City', 'Amaze', 'Jazz', 'WR-V', 'CR-V'],
-    'Toyota': ['Innova', 'Fortuner', 'Yaris', 'Glanza', 'Urban Cruiser']
-  };
-
-  const bikeBrands = ['Honda', 'Hero', 'Bajaj', 'TVS', 'Yamaha', 'Royal Enfield', 'KTM', 'Suzuki'];
-  const bikeModels = {
-    'Honda': ['Activa', 'CB Shine', 'Unicorn', 'Hornet', 'CBR'],
-    'Hero': ['Splendor', 'HF Deluxe', 'Passion', 'Xtreme', 'Destini'],
-    'Bajaj': ['Pulsar', 'Platina', 'Avenger', 'Dominar', 'CT'],
-    'TVS': ['Apache', 'Jupiter', 'Star City', 'Ntorq', 'Radeon'],
-    'Yamaha': ['FZ', 'R15', 'MT', 'Fascino', 'Ray ZR'],
-    'Royal Enfield': ['Classic', 'Bullet', 'Himalayan', 'Interceptor', 'Continental GT'],
-    'KTM': ['Duke', 'RC', 'Adventure'],
-    'Suzuki': ['Gixxer', 'Access', 'Intruder', 'Hayabusa']
-  };
-
-  const timeSlots = [
-    '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
-    '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
-  ];
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (garageId) {
-      fetchGarageAndServices();
-    }
-  }, [garageId]);
+    fetchGarageAndService();
+  }, [garageId, serviceId]);
 
-  const fetchGarageAndServices = async () => {
+  const fetchGarageAndService = async () => {
     try {
-      setLoading(true);
-      
-      // Fetch garage details
+      // Fetch garage
       const { data: garageData, error: garageError } = await supabase
         .from('garages')
-        .select('id, name, location')
+        .select('*')
         .eq('id', garageId)
         .single();
 
       if (garageError) throw garageError;
-
-      // Fetch services for this garage
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('id, name, price, category, duration')
-        .eq('garage_id', garageId);
-
-      if (servicesError) throw servicesError;
-
-      console.log('Fetched garage:', garageData);
-      console.log('Fetched services:', servicesData);
-
       setGarage(garageData);
-      setAvailableServices(servicesData || []);
-      setFormData(prev => ({
-        ...prev,
-        garageName: garageData.name
-      }));
 
+      // Fetch service
+      const { data: serviceData, error: serviceError } = await supabase
+        .from('services')
+        .select('*')
+        .eq('id', serviceId)
+        .single();
+
+      if (serviceError) throw serviceError;
+      setService(serviceData);
     } catch (error: any) {
-      console.error('Error fetching garage and services:', error);
+      console.error('Error fetching data:', error);
       toast({
         title: "Error",
-        description: "Failed to load garage information",
+        description: "Failed to load booking details",
         variant: "destructive",
       });
     } finally {
@@ -123,124 +91,84 @@ const BookingPage = () => {
     }
   };
 
-  const handleServiceChange = (serviceId, checked) => {
-    if (checked) {
-      setFormData(prev => ({
-        ...prev,
-        services: [...prev.services, serviceId]
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        services: prev.services.filter(id => id !== serviceId)
-      }));
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.customerName.trim()) {
+      newErrors.customerName = 'Name is required';
     }
+
+    if (!formData.customerEmail.trim()) {
+      newErrors.customerEmail = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.customerEmail)) {
+      newErrors.customerEmail = 'Please enter a valid email';
+    }
+
+    if (!formData.customerPhone.trim()) {
+      newErrors.customerPhone = 'Mobile number is required';
+    } else if (!/^\d{10}$/.test(formData.customerPhone.replace(/\D/g, ''))) {
+      newErrors.customerPhone = 'Please enter a valid 10-digit mobile number';
+    }
+
+    if (!formData.vehicleMake.trim()) {
+      newErrors.vehicleMake = 'Vehicle make is required';
+    }
+
+    if (!formData.vehicleModel.trim()) {
+      newErrors.vehicleModel = 'Vehicle model is required';
+    }
+
+    if (!formData.bookingDate) {
+      newErrors.bookingDate = 'Booking date is required';
+    }
+
+    if (!formData.bookingTime) {
+      newErrors.bookingTime = 'Booking time is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const calculateTotal = () => {
-    return formData.services.reduce((total, serviceId) => {
-      const service = availableServices.find(s => s.id === serviceId);
-      return total + (service ? service.price : 0);
-    }, 0);
-  };
-
-  const handleVehicleTypeChange = (type: string) => {
-    setFormData({
-      ...formData,
-      vehicleType: type,
-      vehicleBrand: '',
-      vehicleModel: ''
-    });
-  };
-
-  const handleVehicleBrandChange = (brand: string) => {
-    setFormData({
-      ...formData,
-      vehicleBrand: brand,
-      vehicleModel: ''
-    });
-  };
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to book a service.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!formData.vehicleBrand || !formData.vehicleModel || !formData.serviceDate || !formData.serviceTime || formData.services.length === 0 || !formData.mobileNumber) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields including mobile number and select at least one service.",
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!validateForm() || !user || !garage || !service) return;
 
-    // Validate mobile number (basic validation for 10 digits)
-    const mobileRegex = /^[0-9]{10}$/;
-    if (!mobileRegex.test(formData.mobileNumber)) {
-      toast({
-        title: "Invalid Mobile Number",
-        description: "Please enter a valid 10-digit mobile number.",
-        variant: "destructive"
-      });
-      return;
-    }
-
+    setSubmitting(true);
     try {
-      setSubmitting(true);
-
-      // Get the first selected service for the booking
-      const primaryServiceId = formData.services[0];
-      
-      // Create booking in Supabase
-      const { data: bookingData, error: bookingError } = await supabase
+      const { error } = await supabase
         .from('bookings')
         .insert({
           user_id: user.id,
-          garage_id: garageId,
-          service_id: primaryServiceId,
-          booking_date: formData.serviceDate,
-          booking_time: formData.serviceTime,
-          vehicle_make: formData.vehicleBrand,
+          garage_id: garage.id,
+          service_id: service.id,
+          customer_name: formData.customerName,
+          customer_email: formData.customerEmail,
+          customer_phone: formData.customerPhone,
+          vehicle_make: formData.vehicleMake,
           vehicle_model: formData.vehicleModel,
           vehicle_type: formData.vehicleType,
-          total_amount: calculateTotal(),
-          notes: formData.notes || null,
-          customer_name: user.email?.split('@')[0] || 'Customer',
-          customer_email: user.email || '',
-          customer_phone: formData.mobileNumber,
-          payment_method: 'pay-later',
+          booking_date: formData.bookingDate,
+          booking_time: formData.bookingTime,
+          notes: formData.notes,
+          total_amount: service.price,
+          payment_method: formData.paymentMethod,
           status: 'confirmed'
-        })
-        .select()
-        .single();
+        });
 
-      if (bookingError) {
-        console.error('Booking error:', bookingError);
-        throw bookingError;
-      }
-
-      console.log('Booking created successfully:', bookingData);
+      if (error) throw error;
 
       toast({
         title: "Booking Confirmed!",
-        description: `Your booking at ${formData.garageName} has been confirmed for ${formData.serviceDate}.`,
+        description: "Your service has been booked successfully.",
       });
 
-      // Navigate to profile to see the booking
       navigate('/profile');
     } catch (error: any) {
-      console.error('Error creating booking:', error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to create booking. Please try again.",
+        title: "Booking Failed",
+        description: error.message || "Failed to create booking",
         variant: "destructive",
       });
     } finally {
@@ -248,331 +176,266 @@ const BookingPage = () => {
     }
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
       </div>
     );
   }
 
-  if (!garage) {
+  if (!garage || !service) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Garage not found</h2>
-          <p className="text-gray-500 mb-4">The garage you're looking for doesn't exist.</p>
-          <Button asChild>
-            <Link to="/services">Back to Services</Link>
-          </Button>
-        </div>
+        <p className="text-gray-500">Service not found</p>
       </div>
     );
   }
-
-  const currentBrands = formData.vehicleType === 'car' ? carBrands : bikeBrands;
-  const currentModels = formData.vehicleType === 'car' 
-    ? carModels[formData.vehicleBrand] || [] 
-    : bikeModels[formData.vehicleBrand] || [];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/services">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Services
-              </Link>
-            </Button>
-            <h1 className="text-xl font-bold text-gray-900">Book Service</h1>
-            <div className="w-20"></div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Main Form */}
-            <div className="lg:col-span-2 space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Car className="h-5 w-5 mr-2" />
-                    Garage Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div>
-                    <Label htmlFor="garage-name">Selected Garage</Label>
-                    <Input
-                      id="garage-name"
-                      value={formData.garageName}
-                      disabled
-                      className="bg-gray-100"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div>
-                    <Label htmlFor="mobile-number">Mobile Number *</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        id="mobile-number"
-                        type="tel"
-                        placeholder="Enter 10-digit mobile number"
-                        value={formData.mobileNumber}
-                        onChange={(e) => setFormData({...formData, mobileNumber: e.target.value})}
-                        className="pl-10"
-                        maxLength={10}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Vehicle Details</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <Label htmlFor="vehicle-type">Vehicle Type *</Label>
-                    <Select value={formData.vehicleType} onValueChange={handleVehicleTypeChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select vehicle type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="car">Car</SelectItem>
-                        <SelectItem value="bike">Bike</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="vehicle-brand">
-                        {formData.vehicleType === 'car' ? 'Car Brand' : 'Bike Brand'} *
-                      </Label>
-                      <Select value={formData.vehicleBrand} onValueChange={handleVehicleBrandChange}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select brand" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currentBrands.map(brand => (
-                            <SelectItem key={brand} value={brand}>{brand}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="vehicle-model">
-                        {formData.vehicleType === 'car' ? 'Car Model' : 'Bike Model'} *
-                      </Label>
-                      <Select 
-                        value={formData.vehicleModel} 
-                        onValueChange={(value) => setFormData({...formData, vehicleModel: value})} 
-                        disabled={!formData.vehicleBrand}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {currentModels.map(model => (
-                            <SelectItem key={model} value={model}>{model}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    Schedule Service
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="service-date">Service Date *</Label>
-                      <Input
-                        id="service-date"
-                        type="date"
-                        value={formData.serviceDate}
-                        onChange={(e) => setFormData({...formData, serviceDate: e.target.value})}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="service-time">Preferred Time *</Label>
-                      <Select value={formData.serviceTime} onValueChange={(value) => setFormData({...formData, serviceTime: value})}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select time slot" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeSlots.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Select Services *</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {availableServices.length === 0 ? (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">No services available for this garage.</p>
-                      <p className="text-sm text-gray-400 mt-2">Please contact the garage directly.</p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {availableServices.map(service => (
-                        <div key={service.id} className="flex items-center space-x-2 p-3 border rounded-lg">
-                          <Checkbox
-                            id={service.id}
-                            checked={formData.services.includes(service.id)}
-                            onCheckedChange={(checked) => handleServiceChange(service.id, checked)}
-                          />
-                          <div className="flex-1">
-                            <Label htmlFor={service.id} className="cursor-pointer">
-                              {service.name}
-                            </Label>
-                            <p className="text-sm text-gray-500">₹{service.price}</p>
-                            {service.category && (
-                              <p className="text-xs text-gray-400">{service.category}</p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <FileText className="h-5 w-5 mr-2" />
-                    Additional Notes
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Textarea
-                    placeholder="Any specific requirements or issues you'd like to mention..."
-                    value={formData.notes}
-                    onChange={(e) => setFormData({...formData, notes: e.target.value})}
-                    rows={4}
-                  />
-                </CardContent>
-              </Card>
+      <PageHeader title="Book Service" backTo="/services" />
+      
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        {/* Service Summary */}
+        <Card>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg">{service.name}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <span className="text-gray-600">{garage.name}</span>
+              <span className="font-bold text-lg text-red-600">₹{service.price}</span>
             </div>
+            <p className="text-sm text-gray-500">{service.description}</p>
+            <div className="flex items-center gap-4 text-sm text-gray-500">
+              <div className="flex items-center">
+                <Clock className="h-4 w-4 mr-1" />
+                {service.duration} mins
+              </div>
+              <div className="flex items-center">
+                <Car className="h-4 w-4 mr-1" />
+                {garage.location}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            {/* Booking Summary */}
-            <div className="lg:col-span-1">
-              <Card className="sticky top-8">
-                <CardHeader>
-                  <CardTitle>Booking Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+        {/* Booking Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Booking Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Customer Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center">
+                  <User className="h-4 w-4 mr-2" />
+                  Customer Information
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Garage:</span>
-                      <span className="font-medium">{formData.garageName}</span>
-                    </div>
-                    {formData.mobileNumber && (
-                      <div className="flex justify-between text-sm">
-                        <span>Mobile:</span>
-                        <span className="font-medium">{formData.mobileNumber}</span>
-                      </div>
-                    )}
-                    {formData.vehicleBrand && formData.vehicleModel && (
-                      <div className="flex justify-between text-sm">
-                        <span>Vehicle:</span>
-                        <span className="font-medium">
-                          {formData.vehicleBrand} {formData.vehicleModel} ({formData.vehicleType})
-                        </span>
-                      </div>
-                    )}
-                    {formData.serviceDate && (
-                      <div className="flex justify-between text-sm">
-                        <span>Date:</span>
-                        <span className="font-medium">{formData.serviceDate}</span>
-                      </div>
-                    )}
-                    {formData.serviceTime && (
-                      <div className="flex justify-between text-sm">
-                        <span>Time:</span>
-                        <span className="font-medium">{formData.serviceTime}</span>
-                      </div>
+                    <Label htmlFor="customerName">Full Name *</Label>
+                    <Input
+                      id="customerName"
+                      value={formData.customerName}
+                      onChange={(e) => handleInputChange('customerName', e.target.value)}
+                      placeholder="Enter your full name"
+                      className={errors.customerName ? 'border-red-500' : ''}
+                    />
+                    {errors.customerName && (
+                      <p className="text-sm text-red-500">{errors.customerName}</p>
                     )}
                   </div>
 
-                  {formData.services.length > 0 && (
-                    <>
-                      <div className="border-t pt-4">
-                        <h4 className="font-medium mb-2">Selected Services:</h4>
-                        <div className="space-y-2">
-                          {formData.services.map(serviceId => {
-                            const service = availableServices.find(s => s.id === serviceId);
-                            return service ? (
-                              <div key={serviceId} className="flex justify-between text-sm">
-                                <span>{service.name}</span>
-                                <span>₹{service.price}</span>
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customerEmail">Email *</Label>
+                    <Input
+                      id="customerEmail"
+                      type="email"
+                      value={formData.customerEmail}
+                      onChange={(e) => handleInputChange('customerEmail', e.target.value)}
+                      placeholder="Enter your email"
+                      className={errors.customerEmail ? 'border-red-500' : ''}
+                    />
+                    {errors.customerEmail && (
+                      <p className="text-sm text-red-500">{errors.customerEmail}</p>
+                    )}
+                  </div>
+                </div>
 
-                      <div className="border-t pt-4">
-                        <div className="flex justify-between font-bold">
-                          <span>Total:</span>
-                          <span>₹{calculateTotal()}</span>
-                        </div>
-                      </div>
-                    </>
+                <div className="space-y-2">
+                  <Label htmlFor="customerPhone" className="flex items-center">
+                    <Phone className="h-4 w-4 mr-1" />
+                    Mobile Number *
+                  </Label>
+                  <Input
+                    id="customerPhone"
+                    type="tel"
+                    value={formData.customerPhone}
+                    onChange={(e) => handleInputChange('customerPhone', e.target.value)}
+                    placeholder="Enter your 10-digit mobile number"
+                    className={errors.customerPhone ? 'border-red-500' : ''}
+                  />
+                  {errors.customerPhone && (
+                    <p className="text-sm text-red-500">{errors.customerPhone}</p>
                   )}
+                </div>
+              </div>
 
-                  <div className="border-t pt-4">
-                    <div className="text-sm text-gray-600 mb-4">
-                      <strong>Payment:</strong> Pay after service completion
-                    </div>
+              {/* Vehicle Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center">
+                  <Car className="h-4 w-4 mr-2" />
+                  Vehicle Information
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleMake">Vehicle Make *</Label>
+                    <Input
+                      id="vehicleMake"
+                      value={formData.vehicleMake}
+                      onChange={(e) => handleInputChange('vehicleMake', e.target.value)}
+                      placeholder="e.g., Toyota, Honda"
+                      className={errors.vehicleMake ? 'border-red-500' : ''}
+                    />
+                    {errors.vehicleMake && (
+                      <p className="text-sm text-red-500">{errors.vehicleMake}</p>
+                    )}
                   </div>
 
-                  <Button 
-                    type="submit" 
-                    className="w-full" 
-                    size="lg"
-                    disabled={availableServices.length === 0 || submitting}
-                  >
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    {submitting ? 'Confirming...' : 'Confirm Booking'}
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicleModel">Vehicle Model *</Label>
+                    <Input
+                      id="vehicleModel"
+                      value={formData.vehicleModel}
+                      onChange={(e) => handleInputChange('vehicleModel', e.target.value)}
+                      placeholder="e.g., Camry, Civic"
+                      className={errors.vehicleModel ? 'border-red-500' : ''}
+                    />
+                    {errors.vehicleModel && (
+                      <p className="text-sm text-red-500">{errors.vehicleModel}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="vehicleType">Vehicle Type</Label>
+                  <Select value={formData.vehicleType} onValueChange={(value) => handleInputChange('vehicleType', value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="car">Car</SelectItem>
+                      <SelectItem value="motorcycle">Motorcycle</SelectItem>
+                      <SelectItem value="truck">Truck</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Booking Schedule */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-gray-900 flex items-center">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Schedule
+                </h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bookingDate">Date *</Label>
+                    <Input
+                      id="bookingDate"
+                      type="date"
+                      value={formData.bookingDate}
+                      onChange={(e) => handleInputChange('bookingDate', e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                      className={errors.bookingDate ? 'border-red-500' : ''}
+                    />
+                    {errors.bookingDate && (
+                      <p className="text-sm text-red-500">{errors.bookingDate}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bookingTime">Time *</Label>
+                    <Input
+                      id="bookingTime"
+                      type="time"
+                      value={formData.bookingTime}
+                      onChange={(e) => handleInputChange('bookingTime', e.target.value)}
+                      className={errors.bookingTime ? 'border-red-500' : ''}
+                    />
+                    {errors.bookingTime && (
+                      <p className="text-sm text-red-500">{errors.bookingTime}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes" className="flex items-center">
+                  <MessageSquare className="h-4 w-4 mr-1" />
+                  Additional Notes
+                </Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => handleInputChange('notes', e.target.value)}
+                  placeholder="Any specific requirements or notes..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-2">
+                <Label className="flex items-center">
+                  <CreditCard className="h-4 w-4 mr-1" />
+                  Payment Method
+                </Label>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="pay_after_service"
+                      name="paymentMethod"
+                      value="pay_after_service"
+                      checked={formData.paymentMethod === 'pay_after_service'}
+                      onChange={(e) => handleInputChange('paymentMethod', e.target.value)}
+                      className="text-red-600"
+                    />
+                    <Label htmlFor="pay_after_service" className="cursor-pointer">
+                      Pay After Service Completion
+                    </Label>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1 ml-6">
+                    Payment will be collected after the service is completed
+                  </p>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-red-600 hover:bg-red-700 text-white py-3"
+              >
+                {submitting ? 'Booking...' : 'Confirm Booking'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

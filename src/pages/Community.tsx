@@ -305,6 +305,21 @@ const Community = () => {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) {
+      return 'now';
+    } else if (diffInHours < 24) {
+      return `${diffInHours}h`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays}d`;
+    }
+  };
+
   const filteredContent = searchQuery.trim() === '' ? posts : [
     ...posts.filter(post => 
       post.caption.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -459,24 +474,24 @@ const Community = () => {
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       <div className="flex items-start space-x-3">
-                        <Avatar>
+                        <Avatar className="flex-shrink-0">
                           <AvatarFallback>{item.username.charAt(0).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2 min-w-0">
-                              <Link to={`/profile/${item.username}`} className="font-semibold hover:underline truncate">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2 min-w-0 flex-1">
+                              <Link to={`/profile/${item.username}`} className="font-semibold hover:underline truncate text-gray-900">
                                 {item.username}
                               </Link>
-                              <span className="text-gray-400">·</span>
-                              <span className="text-gray-500 text-sm truncate">
-                                {new Date(item.created_at).toLocaleDateString()}
+                              <span className="text-gray-400 text-sm">·</span>
+                              <span className="text-gray-500 text-sm flex-shrink-0">
+                                {formatDate(item.created_at)}
                               </span>
                             </div>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="flex-shrink-0">
+                                <Button variant="ghost" size="sm" className="flex-shrink-0 h-8 w-8 p-0">
                                   <MoreHorizontal className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -492,57 +507,59 @@ const Community = () => {
                             </DropdownMenu>
                           </div>
                           
-                          <div className="mt-2">
+                          <div className="mb-3">
                             <p className="text-gray-900 whitespace-pre-wrap break-words">{item.caption}</p>
                             {item.post_image && (
                               <img src={item.post_image} alt="Post content" className="mt-3 rounded-lg max-w-full h-auto" />
                             )}
                           </div>
                           
-                          <div className="flex items-center justify-between mt-4 pt-2 border-t">
-                            <CommentsSection 
-                              postId={item.id}
-                              commentsCount={item.comments}
-                              onCommentsUpdate={(count) => handleCommentsUpdate(item.id, count)}
-                            />
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-gray-500 hover:text-green-600"
-                            >
-                              <Repeat2 className="h-4 w-4 mr-2" />
-                              0
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="text-gray-500 hover:text-red-600"
-                              onClick={() => handlePostInteraction(item.id, 'like')}
-                            >
-                              <Heart className="h-4 w-4 mr-2" />
-                              {item.likes}
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600">
-                                  <Share className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleSharePost(item.id, 'twitter')}>
-                                  Share on Twitter
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleSharePost(item.id, 'facebook')}>
-                                  Share on Facebook
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleSharePost(item.id, 'whatsapp')}>
-                                  Share on WhatsApp
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
-                                  Copy Link
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                            <div className="flex items-center space-x-1 sm:space-x-4">
+                              <CommentsSection 
+                                postId={item.id}
+                                commentsCount={item.comments}
+                                onCommentsUpdate={(count) => handleCommentsUpdate(item.id, count)}
+                              />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-gray-500 hover:text-green-600 h-8 px-2 sm:px-3"
+                              >
+                                <Repeat2 className="h-4 w-4 mr-1" />
+                                <span className="text-xs sm:text-sm">0</span>
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="text-gray-500 hover:text-red-600 h-8 px-2 sm:px-3"
+                                onClick={() => handlePostInteraction(item.id, 'like')}
+                              >
+                                <Heart className="h-4 w-4 mr-1" />
+                                <span className="text-xs sm:text-sm">{item.likes}</span>
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600 h-8 w-8 p-0">
+                                    <Share className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleSharePost(item.id, 'twitter')}>
+                                    Share on Twitter
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleSharePost(item.id, 'facebook')}>
+                                    Share on Facebook
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleSharePost(item.id, 'whatsapp')}>
+                                    Share on WhatsApp
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
+                                    Copy Link
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                         </div>
                       </div>
