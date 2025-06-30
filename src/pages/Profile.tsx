@@ -83,71 +83,140 @@ const Profile = () => {
 
   useEffect(() => {
     fetchProfile();
-    fetchPosts();
-    fetchSavedPosts();
-    fetchBookings();
-    fetchReviews();
-    fetchStats();
   }, [username, user]);
 
-  // Real-time updates for bookings, reviews, and saved posts
   useEffect(() => {
-    if (!user || !isOwnProfile) return;
+    if (profile?.id || (isOwnProfile && user?.id)) {
+      fetchPosts();
+      fetchSavedPosts();
+      fetchBookings();
+      fetchReviews();
+      fetchStats();
+    }
+  }, [profile, user, isOwnProfile]);
 
-    const bookingsChannel = supabase
-      .channel('profile-bookings')
+  // Real-time updates for all relevant tables
+  useEffect(() => {
+    const targetUserId = isOwnProfile ? user?.id : profile?.id;
+    if (!targetUserId) return;
+
+    const channels: any[] = [];
+
+    // Posts real-time updates
+    const postsChannel = supabase
+      .channel('profile-posts')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'bookings',
-          filter: `user_id=eq.${user.id}`
+          table: 'posts',
+          filter: `user_id=eq.${targetUserId}`
         },
         () => {
-          fetchBookings();
+          fetchPosts();
+          fetchStats();
         }
       )
       .subscribe();
+    channels.push(postsChannel);
 
-    const reviewsChannel = supabase
-      .channel('profile-reviews')
+    // Followers real-time updates
+    const followersChannel = supabase
+      .channel('profile-followers')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'reviews',
-          filter: `user_id=eq.${user.id}`
+          table: 'followers',
+          filter: `following_id=eq.${targetUserId}`
         },
         () => {
-          fetchReviews();
+          fetchStats();
         }
       )
       .subscribe();
+    channels.push(followersChannel);
 
-    const savedPostsChannel = supabase
-      .channel('profile-saved-posts')
+    // Following real-time updates
+    const followingChannel = supabase
+      .channel('profile-following')
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'saved_posts',
-          filter: `user_id=eq.${user.id}`
+          table: 'followers',
+          filter: `follower_id=eq.${targetUserId}`
         },
         () => {
-          fetchSavedPosts();
+          fetchStats();
         }
       )
       .subscribe();
+    channels.push(followingChannel);
+
+    if (isOwnProfile && user) {
+      // Bookings real-time updates
+      const bookingsChannel = supabase
+        .channel('profile-bookings')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'bookings',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            fetchBookings();
+          }
+        )
+        .subscribe();
+      channels.push(bookingsChannel);
+
+      // Reviews real-time updates
+      const reviewsChannel = supabase
+        .channel('profile-reviews')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'reviews',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            fetchReviews();
+          }
+        )
+        .subscribe();
+      channels.push(reviewsChannel);
+
+      // Saved posts real-time updates
+      const savedPostsChannel = supabase
+        .channel('profile-saved-posts')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'saved_posts',
+            filter: `user_id=eq.${user.id}`
+          },
+          () => {
+            fetchSavedPosts();
+          }
+        )
+        .subscribe();
+      channels.push(savedPostsChannel);
+    }
 
     return () => {
-      supabase.removeChannel(bookingsChannel);
-      supabase.removeChannel(reviewsChannel);
-      supabase.removeChannel(savedPostsChannel);
+      channels.forEach(channel => supabase.removeChannel(channel));
     };
-  }, [user, isOwnProfile]);
+  }, [user, profile, isOwnProfile]);
 
   const fetchProfile = async () => {
     try {
