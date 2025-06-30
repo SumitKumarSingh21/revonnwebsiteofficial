@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -19,30 +18,12 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    // For now, we'll keep the like state in localStorage until database types are updated
     if (user) {
-      checkLikeStatus();
+      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${user.id}`) || '[]');
+      setIsLiked(likedPosts.includes(postId));
     }
   }, [postId, user]);
-
-  const checkLikeStatus = async () => {
-    if (!user) return;
-
-    try {
-      // Temporarily use raw SQL query until types are updated
-      const { data, error } = await supabase.rpc('check_user_like', {
-        user_id: user.id,
-        post_id: postId
-      });
-
-      if (error && error.code !== 'PGRST116') {
-        console.log('Like check temporarily disabled - table may not exist yet');
-        return;
-      }
-      setIsLiked(!!data);
-    } catch (error: any) {
-      console.log('Like functionality temporarily disabled');
-    }
-  };
 
   const handleLikeToggle = async () => {
     if (!user) {
@@ -57,8 +38,13 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
     setLoading(true);
 
     try {
-      // Temporarily simulate like/unlike without database calls
+      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${user.id}`) || '[]');
+      
       if (isLiked) {
+        // Unlike
+        const updatedLikedPosts = likedPosts.filter((id: string) => id !== postId);
+        localStorage.setItem(`liked_posts_${user.id}`, JSON.stringify(updatedLikedPosts));
+        
         setIsLiked(false);
         const newCount = Math.max(likeCount - 1, 0);
         setLikeCount(newCount);
@@ -69,6 +55,10 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
           description: "Post unliked (feature in development)",
         });
       } else {
+        // Like
+        const updatedLikedPosts = [...likedPosts, postId];
+        localStorage.setItem(`liked_posts_${user.id}`, JSON.stringify(updatedLikedPosts));
+        
         setIsLiked(true);
         const newCount = likeCount + 1;
         setLikeCount(newCount);
