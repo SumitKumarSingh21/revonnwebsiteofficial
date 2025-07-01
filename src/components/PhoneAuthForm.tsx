@@ -44,11 +44,26 @@ export const PhoneAuthForm = ({ isSignUp = false, fullName, onSuccess }: PhoneAu
       });
     } catch (error: any) {
       console.error('Send OTP error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send OTP.",
-        variant: "destructive",
-      });
+      
+      if (error.message?.includes('Invalid From Number') || error.code === 'sms_send_failed') {
+        toast({
+          title: "SMS Configuration Issue",
+          description: "SMS service is not properly configured. Please contact support or try email authentication instead.",
+          variant: "destructive",
+        });
+      } else if (error.message?.includes('Invalid phone number')) {
+        toast({
+          title: "Invalid Phone Number",
+          description: "Please enter a valid phone number with country code (e.g., +1234567890).",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to send OTP. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -112,6 +127,11 @@ export const PhoneAuthForm = ({ isSignUp = false, fullName, onSuccess }: PhoneAu
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? "Sending..." : "Send OTP"}
         </Button>
+        <div className="text-center">
+          <p className="text-sm text-gray-600">
+            Having trouble? Try using email authentication instead.
+          </p>
+        </div>
       </form>
     );
   }
