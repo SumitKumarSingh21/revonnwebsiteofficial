@@ -38,6 +38,13 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      // Clean up any existing auth state first
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -50,16 +57,40 @@ const Auth = () => {
         }
       });
 
-      if (error) throw error;
-
-      toast({
-        title: "Success!",
-        description: "Please check your email to verify your account.",
-      });
+      if (error) {
+        // Handle specific error cases
+        if (error.message.includes('already registered')) {
+          toast({
+            title: "Account already exists",
+            description: "This email is already registered. Please sign in instead.",
+            variant: "destructive",
+          });
+        } else if (error.message.includes('Password')) {
+          toast({
+            title: "Password Error",
+            description: "Password must be at least 6 characters long.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Success!",
+          description: "Account created successfully! Please check your email to verify your account.",
+        });
+        
+        // Clear form
+        setEmail('');
+        setPassword('');
+        setFullName('');
+        setPhone('');
+      }
     } catch (error: any) {
+      console.error('Signup error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An unexpected error occurred during signup.",
         variant: "destructive",
       });
     } finally {
@@ -72,18 +103,37 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
+      // Clean up any existing auth state first
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (err) {
+        // Continue even if this fails
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
-
-      navigate(from, { replace: true });
+      if (error) {
+        if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Invalid Credentials",
+            description: "Please check your email and password and try again.",
+            variant: "destructive",
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        // Force page reload for clean state
+        window.location.href = from;
+      }
     } catch (error: any) {
+      console.error('Signin error:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "An unexpected error occurred during signin.",
         variant: "destructive",
       });
     } finally {
