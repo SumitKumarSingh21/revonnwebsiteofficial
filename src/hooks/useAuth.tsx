@@ -26,19 +26,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(session?.user ?? null);
         setLoading(false);
 
-        // Handle email confirmation
+        // Handle email confirmation with better redirect logic
         if (event === 'SIGNED_IN' && session) {
-          // Check if this is from email confirmation
           const urlParams = new URLSearchParams(window.location.search);
           const type = urlParams.get('type');
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          const hashType = hashParams.get('type');
           
-          if (type === 'signup' || window.location.hash.includes('type=signup')) {
-            // Clear URL parameters and redirect to home
-            window.history.replaceState({}, document.title, '/');
+          if (type === 'signup' || hashType === 'signup') {
+            // Clean URL and redirect to home
+            const newUrl = window.location.origin + '/';
+            window.history.replaceState({}, document.title, newUrl);
             
-            // Use setTimeout to ensure the state is fully updated
+            // Use setTimeout to ensure clean redirect
             setTimeout(() => {
-              window.location.href = '/';
+              if (window.location.pathname !== '/') {
+                window.location.replace('/');
+              }
             }, 100);
           }
         }
@@ -66,12 +70,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       await supabase.auth.signOut({ scope: 'global' });
       
-      // Force reload to ensure clean state
-      window.location.href = '/';
+      // Force clean redirect to home
+      window.location.replace('/');
     } catch (error) {
       console.error('Error signing out:', error);
-      // Force reload even if sign out fails
-      window.location.href = '/';
+      // Force redirect even if sign out fails
+      window.location.replace('/');
     }
   };
 

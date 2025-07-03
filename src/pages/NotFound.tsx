@@ -1,35 +1,17 @@
 
 import { useLocation, Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 const NotFound = () => {
   const location = useLocation();
   const { user, loading } = useAuth();
-  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   useEffect(() => {
-    console.error(
-      "404 Error: User attempted to access non-existent route:",
-      location.pathname
-    );
+    console.log("404 Page accessed:", location.pathname);
+  }, [location.pathname]);
 
-    // Check if this is a refresh issue with protected routes
-    const protectedRoutes = ['/services', '/community', '/profile', '/settings', '/notifications', '/revvy'];
-    const isProtectedRoute = protectedRoutes.some(route => location.pathname.startsWith(route));
-    
-    if (isProtectedRoute && !loading) {
-      if (user) {
-        // User is authenticated, redirect to the intended route
-        setShouldRedirect(true);
-      } else {
-        // User is not authenticated, redirect to auth
-        setShouldRedirect(true);
-      }
-    }
-  }, [location.pathname, user, loading]);
-
-  // Handle authentication redirects
+  // Show loading spinner while checking auth
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -38,20 +20,21 @@ const NotFound = () => {
     );
   }
 
-  // Check if this is a protected route that user should have access to
-  const protectedRoutes = ['/services', '/community', '/profile', '/settings', '/notifications', '/revvy'];
+  // Define protected routes
+  const protectedRoutes = ['/services', '/community', '/profile', '/settings', '/notifications', '/revvy', '/book'];
   const isProtectedRoute = protectedRoutes.some(route => location.pathname.startsWith(route));
   
+  // If it's a protected route and user is authenticated, redirect to home and let React Router handle it
   if (isProtectedRoute && user) {
-    // Redirect authenticated user to the correct route
-    return <Navigate to={location.pathname} replace />;
+    return <Navigate to="/" replace />;
   }
 
+  // If it's a protected route and user is not authenticated, redirect to auth
   if (isProtectedRoute && !user) {
-    // Redirect unauthenticated user to auth page
     return <Navigate to="/auth" replace />;
   }
 
+  // For all other routes, show 404 page
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="text-center">
@@ -59,19 +42,19 @@ const NotFound = () => {
         <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
         <p className="text-gray-500 mb-6">The page you're looking for doesn't exist.</p>
         <div className="space-y-2">
-          <a 
-            href="/" 
+          <button 
+            onClick={() => window.location.href = '/'} 
             className="inline-block bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
           >
             Return to Home
-          </a>
+          </button>
           {!user && (
-            <a 
-              href="/auth" 
+            <button 
+              onClick={() => window.location.href = '/auth'} 
               className="inline-block ml-4 bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg transition-colors"
             >
               Sign In
-            </a>
+            </button>
           )}
         </div>
       </div>
