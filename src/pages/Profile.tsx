@@ -337,6 +337,7 @@ const Profile = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Fetched bookings:', data); // Debug log to see actual data
       setBookings(data || []);
     } catch (error: any) {
       console.error('Error fetching bookings:', error);
@@ -881,15 +882,17 @@ const Profile = () => {
                                 <span>🕐 {booking.booking_time}</span>
                               </div>
                               
-                              {/* Show assigned mechanic information */}
-                              {booking.assigned_mechanic_id && booking.assigned_mechanic_name && (
+                              {/* Show assigned mechanic information from the booking data */}
+                              {booking.assigned_mechanic_id && (
                                 <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                   <div className="flex items-center space-x-2">
                                     <Users className="h-4 w-4 text-blue-600" />
                                     <span className="font-medium text-blue-800">Assigned Mechanic</span>
                                   </div>
                                   <div className="mt-1 text-sm text-blue-700">
-                                    <p className="font-medium">{booking.assigned_mechanic_name}</p>
+                                    {booking.assigned_mechanic_name && (
+                                      <p className="font-medium">{booking.assigned_mechanic_name}</p>
+                                    )}
                                     <p className="text-blue-600">ID: {booking.assigned_mechanic_id}</p>
                                     {booking.assigned_at && (
                                       <p className="text-blue-600">
