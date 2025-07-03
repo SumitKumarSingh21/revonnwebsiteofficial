@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, ArrowLeft, RefreshCw, Bookmark } from 'lucide-react';
@@ -46,6 +45,9 @@ interface Booking {
   vehicle_model: string;
   notes: string;
   created_at: string;
+  assigned_mechanic_id?: string;
+  assigned_mechanic_name?: string;
+  assigned_at?: string;
 }
 
 interface Review {
@@ -475,8 +477,8 @@ const Profile = () => {
         title: "Error",
         description: "Failed to unsave post.",
         variant: "destructive",
-      });
-    }
+        });
+      }
   };
 
   const handleShare = async (post: Post, platform?: string) => {
