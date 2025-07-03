@@ -878,6 +878,26 @@ const Profile = () => {
                                 <span>📅 {new Date(booking.booking_date).toLocaleDateString()}</span>
                                 <span>🕐 {booking.booking_time}</span>
                               </div>
+                              
+                              {/* Show assigned mechanic information */}
+                              {booking.assigned_mechanic_id && booking.assigned_mechanic_name && (
+                                <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                  <div className="flex items-center space-x-2">
+                                    <Users className="h-4 w-4 text-blue-600" />
+                                    <span className="font-medium text-blue-800">Assigned Mechanic</span>
+                                  </div>
+                                  <div className="mt-1 text-sm text-blue-700">
+                                    <p className="font-medium">{booking.assigned_mechanic_name}</p>
+                                    <p className="text-blue-600">ID: {booking.assigned_mechanic_id}</p>
+                                    {booking.assigned_at && (
+                                      <p className="text-blue-600">
+                                        Assigned: {new Date(booking.assigned_at).toLocaleDateString()} at {new Date(booking.assigned_at).toLocaleTimeString()}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                              
                               {booking.notes && (
                                 <p className="text-gray-600 text-sm mt-2">{booking.notes}</p>
                               )}
