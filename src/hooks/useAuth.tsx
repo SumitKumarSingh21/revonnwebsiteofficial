@@ -21,9 +21,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Handle email confirmation
+        if (event === 'SIGNED_IN' && session) {
+          // Check if this is from email confirmation
+          const urlParams = new URLSearchParams(window.location.search);
+          const type = urlParams.get('type');
+          
+          if (type === 'signup' || window.location.hash.includes('type=signup')) {
+            // Clear URL parameters and redirect to home
+            window.history.replaceState({}, document.title, '/');
+            
+            // Use setTimeout to ensure the state is fully updated
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 100);
+          }
+        }
       }
     );
 
@@ -38,7 +56,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      // Clear local storage
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      await supabase.auth.signOut({ scope: 'global' });
+      
+      // Force reload to ensure clean state
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+      // Force reload even if sign out fails
+      window.location.href = '/';
+    }
   };
 
   return (

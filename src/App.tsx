@@ -71,6 +71,7 @@ const App = () => (
                   <Revvy />
                 </ProtectedRoute>
               } />
+              {/* Catch all route for 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNavigation />
