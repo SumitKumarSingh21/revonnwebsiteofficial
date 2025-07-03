@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Settings, MapPin, Calendar, Users, Heart, MessageCircle, Share, ArrowLeft, RefreshCw, Bookmark } from 'lucide-react';
@@ -48,6 +49,11 @@ interface Booking {
   assigned_mechanic_id?: string;
   assigned_mechanic_name?: string;
   assigned_at?: string;
+  mechanic_details?: {
+    mechanic_id: string;
+    name: string;
+    phone?: string;
+  };
 }
 
 interface Review {
@@ -337,8 +343,33 @@ const Profile = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      console.log('Fetched bookings:', data); // Debug log to see actual data
-      setBookings(data || []);
+      
+      // Fetch mechanic details for bookings that have assigned mechanics
+      const bookingsWithMechanicDetails = await Promise.all(
+        (data || []).map(async (booking) => {
+          if (booking.assigned_mechanic_id) {
+            try {
+              const { data: mechanicData, error: mechanicError } = await supabase
+                .from('mechanics')
+                .select('mechanic_id, name, phone')
+                .eq('id', booking.assigned_mechanic_id)
+                .single();
+
+              if (!mechanicError && mechanicData) {
+                return {
+                  ...booking,
+                  mechanic_details: mechanicData
+                };
+              }
+            } catch (error) {
+              console.error('Error fetching mechanic details:', error);
+            }
+          }
+          return booking;
+        })
+      );
+
+      setBookings(bookingsWithMechanicDetails);
     } catch (error: any) {
       console.error('Error fetching bookings:', error);
     }
@@ -882,7 +913,7 @@ const Profile = () => {
                                 <span>🕐 {booking.booking_time}</span>
                               </div>
                               
-                              {/* Show assigned mechanic information from the booking data */}
+                              {/* Show assigned mechanic information with correct ID and phone */}
                               {booking.assigned_mechanic_id && (
                                 <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                                   <div className="flex items-center space-x-2">
@@ -890,10 +921,22 @@ const Profile = () => {
                                     <span className="font-medium text-blue-800">Assigned Mechanic</span>
                                   </div>
                                   <div className="mt-1 text-sm text-blue-700">
-                                    {booking.assigned_mechanic_name && (
-                                      <p className="font-medium">{booking.assigned_mechanic_name}</p>
+                                    {booking.mechanic_details ? (
+                                      <>
+                                        <p className="font-medium">{booking.mechanic_details.name}</p>
+                                        <p className="text-blue-600">ID: {booking.mechanic_details.mechanic_id}</p>
+                                        {booking.mechanic_details.phone && (
+                                          <p className="text-blue-600">Phone: {booking.mechanic_details.phone}</p>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <>
+                                        {booking.assigned_mechanic_name && (
+                                          <p className="font-medium">{booking.assigned_mechanic_name}</p>
+                                        )}
+                                        <p className="text-blue-600">ID: {booking.assigned_mechanic_id}</p>
+                                      </>
                                     )}
-                                    <p className="text-blue-600">ID: {booking.assigned_mechanic_id}</p>
                                     {booking.assigned_at && (
                                       <p className="text-blue-600">
                                         Assigned: {new Date(booking.assigned_at).toLocaleDateString()} at {new Date(booking.assigned_at).toLocaleTimeString()}
