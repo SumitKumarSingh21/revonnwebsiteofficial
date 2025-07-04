@@ -143,7 +143,7 @@ const Community = () => {
       
       const postData = {
         caption: newPost.trim(),
-        post_image: selectedImage || null, // Allow null for posts without images
+        post_image: selectedImage, // Can be null now that the column is nullable
         user_id: user.id,
         username: userProfile?.username || user.email?.split('@')[0] || 'User',
         user_image: userProfile?.avatar_url || null,
