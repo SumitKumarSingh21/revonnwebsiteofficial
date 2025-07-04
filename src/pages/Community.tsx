@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Heart, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
@@ -17,7 +16,7 @@ import CommentsSection from '@/components/CommentsSection';
 interface Post {
   id: string;
   caption: string;
-  post_image?: string;
+  post_image?: string | null;
   likes: number;
   comments: number;
   username: string;
@@ -43,6 +42,7 @@ const Community = () => {
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isCreatingPost, setIsCreatingPost] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -127,24 +127,40 @@ const Community = () => {
   };
 
   const handleCreatePost = async () => {
-    if (!newPost.trim() || !user) return;
+    if (!newPost.trim() || !user) {
+      toast({
+        title: "Error",
+        description: "Please enter some text for your post",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setIsCreatingPost(true);
+    
     try {
       const userProfile = profiles.find(p => p.id === user.id);
       
+      const postData = {
+        caption: newPost.trim(),
+        post_image: selectedImage || null, // Allow null for posts without images
+        user_id: user.id,
+        username: userProfile?.username || user.email?.split('@')[0] || 'User',
+        user_image: userProfile?.avatar_url || null,
+        likes: 0,
+        comments: 0
+      };
+
+      console.log('Creating post with data:', postData);
+
       const { error } = await supabase
         .from('posts')
-        .insert({
-          caption: newPost,
-          post_image: selectedImage,
-          user_id: user.id,
-          username: userProfile?.username || user.email?.split('@')[0] || 'User',
-          user_image: userProfile?.avatar_url,
-          likes: 0,
-          comments: 0
-        });
+        .insert(postData);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Post creation error:', error);
+        throw error;
+      }
 
       setNewPost('');
       setSelectedImage(null);
@@ -154,12 +170,18 @@ const Community = () => {
         title: "Post Created",
         description: "Your post has been shared with the community.",
       });
+
+      // Refresh posts
+      await fetchPosts();
     } catch (error: any) {
+      console.error('Error creating post:', error);
       toast({
         title: "Error",
-        description: "Failed to create post",
+        description: error.message || "Failed to create post. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingPost(false);
     }
   };
 
@@ -390,6 +412,7 @@ const Community = () => {
                         value={newPost}
                         onChange={(e) => setNewPost(e.target.value)}
                         className="min-h-[100px] border-none resize-none focus:ring-0 p-0"
+                        disabled={isCreatingPost}
                       />
                     </div>
                   </div>
@@ -402,6 +425,7 @@ const Community = () => {
                         size="sm"
                         className="absolute top-2 right-2 bg-black/50 text-white hover:bg-black/70"
                         onClick={() => setSelectedImage(null)}
+                        disabled={isCreatingPost}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -416,15 +440,20 @@ const Community = () => {
                         onChange={handleImageUpload}
                         className="hidden"
                         id="image-upload"
+                        disabled={isCreatingPost}
                       />
                       <label htmlFor="image-upload">
                         <Button variant="ghost" size="sm" asChild>
-                          <span className="cursor-pointer">📷 Photo</span>
+                          <span className={`cursor-pointer ${isCreatingPost ? 'pointer-events-none opacity-50' : ''}`}>📷 Photo</span>
                         </Button>
                       </label>
                     </div>
-                    <Button onClick={handleCreatePost} disabled={!newPost.trim()} className="bg-red-600 hover:bg-red-700">
-                      Post
+                    <Button 
+                      onClick={handleCreatePost} 
+                      disabled={!newPost.trim() || isCreatingPost} 
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {isCreatingPost ? 'Posting...' : 'Post'}
                     </Button>
                   </div>
                 </div>
