@@ -37,7 +37,7 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
   const fetchComments = async () => {
     try {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('comments')
         .select(`
           *,
@@ -62,7 +62,7 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
     try {
       setLoading(true);
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('comments')
         .insert({
           post_id: postId,

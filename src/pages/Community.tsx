@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Heart, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
+import { Plus, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -12,6 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import CommentsSection from '@/components/CommentsSection';
+import LikeButton from '@/components/LikeButton';
 
 interface Post {
   id: string;
@@ -182,34 +184,6 @@ const Community = () => {
       });
     } finally {
       setIsCreatingPost(false);
-    }
-  };
-
-  const handlePostInteraction = async (postId: string, action: 'like') => {
-    try {
-      const post = posts.find(p => p.id === postId);
-      if (!post) return;
-
-      const updateData = { likes: post.likes + 1 };
-
-      const { error } = await supabase
-        .from('posts')
-        .update(updateData)
-        .eq('id', postId);
-
-      if (error) throw error;
-
-      setPosts(posts.map(p => 
-        p.id === postId 
-          ? { ...p, ...updateData }
-          : p
-      ));
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to update post",
-        variant: "destructive",
-      });
     }
   };
 
@@ -558,15 +532,15 @@ const Community = () => {
                                 <Repeat2 className="h-4 w-4 mr-1" />
                                 <span className="text-xs sm:text-sm">0</span>
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="text-gray-500 hover:text-red-600 h-8 px-2 sm:px-3"
-                                onClick={() => handlePostInteraction(item.id, 'like')}
-                              >
-                                <Heart className="h-4 w-4 mr-1" />
-                                <span className="text-xs sm:text-sm">{item.likes}</span>
-                              </Button>
+                              <LikeButton 
+                                postId={item.id}
+                                initialLikes={item.likes}
+                                onLikeChange={(newCount) => {
+                                  setPosts(posts.map(p => 
+                                    p.id === item.id ? { ...p, likes: newCount } : p
+                                  ));
+                                }}
+                              />
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="sm" className="text-gray-500 hover:text-blue-600 h-8 w-8 p-0">

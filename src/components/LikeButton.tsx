@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,12 +19,32 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // For now, we'll keep the like state in localStorage until database types are updated
     if (user) {
-      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${user.id}`) || '[]');
-      setIsLiked(likedPosts.includes(postId));
+      checkIfLiked();
     }
   }, [postId, user]);
+
+  const checkIfLiked = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('likes')
+        .select('id')
+        .eq('post_id', postId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking like status:', error);
+        return;
+      }
+
+      setIsLiked(!!data);
+    } catch (error: any) {
+      console.error('Error checking like status:', error);
+    }
+  };
 
   const handleLikeToggle = async () => {
     if (!user) {
@@ -38,36 +59,35 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
     setLoading(true);
 
     try {
-      const likedPosts = JSON.parse(localStorage.getItem(`liked_posts_${user.id}`) || '[]');
-      
       if (isLiked) {
         // Unlike
-        const updatedLikedPosts = likedPosts.filter((id: string) => id !== postId);
-        localStorage.setItem(`liked_posts_${user.id}`, JSON.stringify(updatedLikedPosts));
-        
+        const { error } = await supabase
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        if (error) throw error;
+
         setIsLiked(false);
         const newCount = Math.max(likeCount - 1, 0);
         setLikeCount(newCount);
         onLikeChange?.(newCount);
-        
-        toast({
-          title: "Unlike",
-          description: "Post unliked (feature in development)",
-        });
       } else {
         // Like
-        const updatedLikedPosts = [...likedPosts, postId];
-        localStorage.setItem(`liked_posts_${user.id}`, JSON.stringify(updatedLikedPosts));
-        
+        const { error } = await supabase
+          .from('likes')
+          .insert({
+            post_id: postId,
+            user_id: user.id
+          });
+
+        if (error) throw error;
+
         setIsLiked(true);
         const newCount = likeCount + 1;
         setLikeCount(newCount);
         onLikeChange?.(newCount);
-        
-        toast({
-          title: "Like",
-          description: "Post liked (feature in development)",
-        });
       }
     } catch (error: any) {
       console.error('Error toggling like:', error);
