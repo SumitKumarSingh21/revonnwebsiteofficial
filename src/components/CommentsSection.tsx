@@ -37,7 +37,7 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
   const fetchComments = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_post_comments', {
+      const { data, error } = await (supabase.rpc as any)('get_post_comments', {
         p_post_id: postId
       });
 
@@ -64,7 +64,7 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
     try {
       setLoading(true);
       
-      const { error } = await supabase.rpc('add_comment', {
+      const { error } = await (supabase.rpc as any)('add_comment', {
         p_post_id: postId,
         p_user_id: user.id,
         p_content: newComment.trim()

@@ -28,7 +28,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc('check_user_liked_post', {
+      const { data, error } = await (supabase.rpc as any)('check_user_liked_post', {
         p_post_id: postId,
         p_user_id: user.id
       });
@@ -38,7 +38,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
         return;
       }
 
-      setIsLiked(data === true);
+      setIsLiked(Boolean(data));
     } catch (error: any) {
       console.error('Error checking like status:', error);
     }
@@ -59,7 +59,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
     try {
       if (isLiked) {
         // Unlike using RPC function
-        const { error } = await supabase.rpc('unlike_post', {
+        const { error } = await (supabase.rpc as any)('unlike_post', {
           p_post_id: postId,
           p_user_id: user.id
         });
@@ -72,7 +72,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
         onLikeChange?.(newCount);
       } else {
         // Like using RPC function
-        const { error } = await supabase.rpc('like_post', {
+        const { error } = await (supabase.rpc as any)('like_post', {
           p_post_id: postId,
           p_user_id: user.id
         });
