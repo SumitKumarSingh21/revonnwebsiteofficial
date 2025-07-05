@@ -37,13 +37,23 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
   const fetchComments = async () => {
     try {
-      // Use RPC function to get comments with profile data
-      const { data, error } = await supabase.rpc('get_post_comments', {
+      // Use type assertion for the RPC function call
+      const { data, error } = await (supabase as any).rpc('get_post_comments', {
         p_post_id: postId
       });
 
       if (error) throw error;
-      setComments(data || []);
+      
+      // Transform the data to match our Comment interface
+      const transformedComments = (data || []).map((comment: any) => ({
+        id: comment.id,
+        content: comment.content,
+        created_at: comment.created_at,
+        user_id: comment.user_id,
+        profiles: comment.profiles
+      }));
+      
+      setComments(transformedComments);
     } catch (error: any) {
       console.error('Error fetching comments:', error);
     }
@@ -55,8 +65,8 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
     try {
       setLoading(true);
       
-      // Use RPC function to add comment
-      const { error } = await supabase.rpc('add_comment', {
+      // Use type assertion for the RPC function call
+      const { error } = await (supabase as any).rpc('add_comment', {
         p_post_id: postId,
         p_user_id: user.id,
         p_content: newComment.trim()

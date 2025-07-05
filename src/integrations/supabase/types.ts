@@ -612,9 +612,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_comment: {
+        Args: { p_post_id: string; p_user_id: string; p_content: string }
+        Returns: undefined
+      }
+      check_user_liked_post: {
+        Args: { p_post_id: string; p_user_id: string }
+        Returns: boolean
+      }
       generate_mechanic_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_post_comments: {
+        Args: { p_post_id: string }
+        Returns: {
+          id: string
+          content: string
+          created_at: string
+          user_id: string
+          profiles: Json
+        }[]
+      }
+      like_post: {
+        Args: { p_post_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      unlike_post: {
+        Args: { p_post_id: string; p_user_id: string }
+        Returns: undefined
       }
     }
     Enums: {

@@ -103,19 +103,6 @@ export const useRealTimeNotifications = () => {
           }
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'bookings',
-          filter: `user_id=eq.${user.id}`
-        },
-        () => {
-          // Refetch notifications when bookings change
-          fetchNotifications();
-        }
-      )
       .subscribe();
 
     return () => {
