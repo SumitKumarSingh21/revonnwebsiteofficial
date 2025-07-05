@@ -28,7 +28,8 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // Use type assertion to work around TypeScript limitation
+      const { data, error } = await (supabase as any)
         .from('likes')
         .select('id')
         .eq('post_id', postId)
@@ -61,7 +62,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
     try {
       if (isLiked) {
         // Unlike
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('likes')
           .delete()
           .eq('post_id', postId)
@@ -75,7 +76,7 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
         onLikeChange?.(newCount);
       } else {
         // Like
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('likes')
           .insert({
             post_id: postId,

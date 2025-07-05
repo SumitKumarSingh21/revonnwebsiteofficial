@@ -37,7 +37,8 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
   const fetchComments = async () => {
     try {
-      const { data, error } = await supabase
+      // Use type assertion to work around TypeScript limitation
+      const { data, error } = await (supabase as any)
         .from('comments')
         .select(`
           *,
@@ -62,7 +63,7 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
     try {
       setLoading(true);
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('comments')
         .insert({
           post_id: postId,
