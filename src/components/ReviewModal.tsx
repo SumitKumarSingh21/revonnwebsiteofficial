@@ -38,6 +38,11 @@ const ReviewModal = ({ booking, existingReview, onReviewSubmitted }: ReviewModal
   const [comment, setComment] = useState(existingReview?.comment || '');
   const [submitting, setSubmitting] = useState(false);
 
+  // Only show review option for completed bookings
+  if (booking.status !== 'completed') {
+    return null;
+  }
+
   const handleSubmit = async () => {
     if (!user || rating === 0) {
       toast({

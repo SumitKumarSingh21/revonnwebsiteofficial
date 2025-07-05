@@ -37,19 +37,10 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
   const fetchComments = async () => {
     try {
-      // Use type assertion to work around TypeScript limitation
-      const { data, error } = await (supabase as any)
-        .from('comments')
-        .select(`
-          *,
-          profiles (
-            full_name,
-            username,
-            avatar_url
-          )
-        `)
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true });
+      // Use RPC function to get comments with profile data
+      const { data, error } = await supabase.rpc('get_post_comments', {
+        p_post_id: postId
+      });
 
       if (error) throw error;
       setComments(data || []);
@@ -63,13 +54,13 @@ const CommentsSection = ({ postId, commentsCount, onCommentsUpdate }: CommentsSe
 
     try {
       setLoading(true);
-      const { error } = await (supabase as any)
-        .from('comments')
-        .insert({
-          post_id: postId,
-          user_id: user.id,
-          content: newComment.trim()
-        });
+      
+      // Use RPC function to add comment
+      const { error } = await supabase.rpc('add_comment', {
+        p_post_id: postId,
+        p_user_id: user.id,
+        p_content: newComment.trim()
+      });
 
       if (error) throw error;
 

@@ -28,20 +28,18 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
     if (!user) return;
 
     try {
-      // Use type assertion to work around TypeScript limitation
-      const { data, error } = await (supabase as any)
-        .from('likes')
-        .select('id')
-        .eq('post_id', postId)
-        .eq('user_id', user.id)
-        .single();
+      // Direct query without type assertion - using raw SQL
+      const { data, error } = await supabase.rpc('check_user_liked_post', {
+        p_post_id: postId,
+        p_user_id: user.id
+      });
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error checking like status:', error);
         return;
       }
 
-      setIsLiked(!!data);
+      setIsLiked(data || false);
     } catch (error: any) {
       console.error('Error checking like status:', error);
     }
@@ -61,12 +59,11 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
 
     try {
       if (isLiked) {
-        // Unlike
-        const { error } = await (supabase as any)
-          .from('likes')
-          .delete()
-          .eq('post_id', postId)
-          .eq('user_id', user.id);
+        // Unlike using RPC function
+        const { error } = await supabase.rpc('unlike_post', {
+          p_post_id: postId,
+          p_user_id: user.id
+        });
 
         if (error) throw error;
 
@@ -75,13 +72,11 @@ const LikeButton = ({ postId, initialLikes, onLikeChange }: LikeButtonProps) => 
         setLikeCount(newCount);
         onLikeChange?.(newCount);
       } else {
-        // Like
-        const { error } = await (supabase as any)
-          .from('likes')
-          .insert({
-            post_id: postId,
-            user_id: user.id
-          });
+        // Like using RPC function
+        const { error } = await supabase.rpc('like_post', {
+          p_post_id: postId,
+          p_user_id: user.id
+        });
 
         if (error) throw error;
 
