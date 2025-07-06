@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useMechanicAvailability } from './useMechanicAvailability';
 
 interface TimeSlot {
   id: string;
@@ -14,6 +15,11 @@ interface TimeSlot {
 export const useTimeSlots = (garageId: string, selectedDate: string) => {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const { 
+    isTimeSlotAvailable, 
+    loading: mechanicLoading 
+  } = useMechanicAvailability(garageId, selectedDate);
 
   useEffect(() => {
     if (!garageId || !selectedDate) {
@@ -62,6 +68,12 @@ export const useTimeSlots = (garageId: string, selectedDate: string) => {
     fetchTimeSlots();
   }, [garageId, selectedDate]);
 
+  // Filter time slots based on mechanic availability
+  const availableTimeSlots = timeSlots.filter(slot => {
+    if (mechanicLoading) return true; // Show all slots while loading
+    return isTimeSlotAvailable(slot.start_time);
+  });
+
   const formatTimeSlot = (startTime: string, endTime: string) => {
     const formatTime = (time: string) => {
       const [hours, minutes] = time.split(':');
@@ -75,8 +87,8 @@ export const useTimeSlots = (garageId: string, selectedDate: string) => {
   };
 
   return {
-    timeSlots,
-    loading,
+    timeSlots: availableTimeSlots,
+    loading: loading || mechanicLoading,
     formatTimeSlot
   };
 };

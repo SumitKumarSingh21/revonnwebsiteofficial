@@ -1,9 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useTimeSlots } from '@/hooks/useTimeSlots';
+import { useMechanicAvailability } from '@/hooks/useMechanicAvailability';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -54,6 +54,7 @@ const BookingPage = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { timeSlots, loading: timeSlotsLoading, formatTimeSlot } = useTimeSlots(garageId || '', bookingDate);
+  const { getAvailableMechanicForSlot } = useMechanicAvailability(garageId || '', bookingDate);
 
   useEffect(() => {
     if (garageId) {
@@ -140,6 +141,21 @@ const BookingPage = () => {
     setIsLoading(true);
 
     try {
+      // Get available mechanic for the selected time slot
+      const availableMechanic = getAvailableMechanicForSlot(selectedTimeSlot);
+      
+      if (!availableMechanic) {
+        toast({
+          title: "No Mechanic Available",
+          description: "No mechanic is available for the selected time slot. Please choose a different time.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Assigning mechanic:', availableMechanic.name, 'for time slot:', selectedTimeSlot);
+
       // Create booking for each selected service
       const bookingPromises = selectedServices.map(async (serviceId) => {
         const service = services.find(s => s.id === serviceId);
@@ -161,7 +177,10 @@ const BookingPage = () => {
             notes: notes,
             payment_method: paymentMethod,
             total_amount: service?.price || 0,
-            status: 'confirmed'
+            status: 'confirmed',
+            assigned_mechanic_id: availableMechanic.id,
+            assigned_mechanic_name: availableMechanic.name,
+            assigned_at: new Date().toISOString()
           });
 
         if (error) throw error;
@@ -171,7 +190,7 @@ const BookingPage = () => {
 
       toast({
         title: "Booking Confirmed!",
-        description: `Your booking${selectedServices.length > 1 ? 's have' : ' has'} been confirmed for ${bookingDate} at ${selectedTimeSlot}`,
+        description: `Your booking${selectedServices.length > 1 ? 's have' : ' has'} been confirmed for ${bookingDate} at ${selectedTimeSlot}. Assigned mechanic: ${availableMechanic.name}`,
       });
 
       navigate('/profile');
