@@ -17,6 +17,7 @@ export const useTimeSlots = (garageId: string, selectedDate: string) => {
 
   useEffect(() => {
     if (!garageId || !selectedDate) {
+      console.log('Missing garageId or selectedDate:', { garageId, selectedDate });
       setTimeSlots([]);
       setLoading(false);
       return;
@@ -25,10 +26,13 @@ export const useTimeSlots = (garageId: string, selectedDate: string) => {
     const fetchTimeSlots = async () => {
       try {
         setLoading(true);
+        console.log('Fetching time slots for:', { garageId, selectedDate });
         
         // Get day of week (0 = Sunday, 1 = Monday, etc.)
-        const selectedDateObj = new Date(selectedDate);
+        const selectedDateObj = new Date(selectedDate + 'T00:00:00');
         const dayOfWeek = selectedDateObj.getDay();
+        
+        console.log('Day of week calculated:', dayOfWeek);
 
         const { data, error } = await supabase
           .from('garage_time_slots')
@@ -38,10 +42,13 @@ export const useTimeSlots = (garageId: string, selectedDate: string) => {
           .eq('is_available', true)
           .order('start_time');
 
+        console.log('Time slots query result:', { data, error });
+
         if (error) {
           console.error('Error fetching time slots:', error);
           setTimeSlots([]);
         } else {
+          console.log('Found time slots:', data?.length || 0);
           setTimeSlots(data || []);
         }
       } catch (error) {

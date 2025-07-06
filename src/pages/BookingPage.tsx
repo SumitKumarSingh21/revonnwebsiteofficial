@@ -273,7 +273,11 @@ const BookingPage = () => {
                   id="date"
                   type="date"
                   value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
+                  onChange={(e) => {
+                    console.log('Date selected:', e.target.value);
+                    setBookingDate(e.target.value);
+                    setSelectedTimeSlot(''); // Reset time slot when date changes
+                  }}
                   min={today}
                   required
                 />
@@ -290,6 +294,7 @@ const BookingPage = () => {
                     {timeSlotsLoading ? (
                       <div className="text-center py-4">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+                        <p className="text-sm text-gray-500 mt-2">Loading available time slots...</p>
                       </div>
                     ) : timeSlots.length > 0 ? (
                       <div className="grid grid-cols-2 gap-2">
@@ -299,16 +304,24 @@ const BookingPage = () => {
                             type="button"
                             variant={selectedTimeSlot === slot.start_time ? "default" : "outline"}
                             className="justify-start"
-                            onClick={() => setSelectedTimeSlot(slot.start_time)}
+                            onClick={() => {
+                              console.log('Time slot selected:', slot.start_time);
+                              setSelectedTimeSlot(slot.start_time);
+                            }}
                           >
                             {formatTimeSlot(slot.start_time, slot.end_time)}
                           </Button>
                         ))}
                       </div>
                     ) : (
-                      <p className="text-gray-500 text-sm py-4 text-center">
-                        No available time slots for this date
-                      </p>
+                      <div className="text-center py-4">
+                        <p className="text-gray-500 text-sm">
+                          No available time slots for this date
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Please try selecting a different date or contact the garage directly
+                        </p>
+                      </div>
                     )}
                   </div>
                 ) : (
