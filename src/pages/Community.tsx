@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark } from 'lucide-react';
+import { Plus, Repeat2, Share, MoreHorizontal, Bell, Search, X, Bookmark, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -10,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import CommentsSection from '@/components/CommentsSection';
@@ -327,6 +327,35 @@ const Community = () => {
     ).map(profile => ({ ...profile, type: 'profile' }))
   ];
 
+  const handleDeletePost = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Remove the post from local state
+      setPosts(posts.filter(p => p.id !== postId));
+
+      toast({
+        title: "Post Deleted",
+        description: "Your post has been deleted successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete post.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
@@ -459,6 +488,7 @@ const Community = () => {
           <div className="space-y-4">
             {filteredContent.map((item: any) => (
               item.type === 'profile' ? (
+                
                 <Card key={`profile-${item.id}`} className="hover:shadow-md transition-shadow">
                   <CardContent className="p-4">
                     <Link to={`/profile/${item.username}`} className="flex items-center space-x-3">
@@ -503,6 +533,30 @@ const Community = () => {
                                   <Bookmark className={`h-4 w-4 mr-2 ${item.is_saved ? 'fill-current' : ''}`} />
                                   {item.is_saved ? 'Unsave Post' : 'Save Post'}
                                 </DropdownMenuItem>
+                                {user && item.user_id === user.id && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete Post
+                                      </DropdownMenuItem>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Delete Post</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Are you sure you want to delete this post? This action cannot be undone.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDeletePost(item.id)} className="bg-red-600 hover:bg-red-700">
+                                          Delete
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
                                 <DropdownMenuItem onClick={() => handleSharePost(item.id)}>
                                   Copy Link
                                 </DropdownMenuItem>

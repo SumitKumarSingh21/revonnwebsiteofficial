@@ -57,7 +57,8 @@ export const useRealTimeNotifications = () => {
   const setupRealtimeSubscription = () => {
     if (!user) return;
 
-    const channel = supabase
+    // Subscribe to new notifications
+    const notificationsChannel = supabase
       .channel('user-notifications')
       .on(
         'postgres_changes',
@@ -105,8 +106,160 @@ export const useRealTimeNotifications = () => {
       )
       .subscribe();
 
+    // Subscribe to activities that should trigger notifications
+    const postsChannel = supabase
+      .channel('posts-activity')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'likes'
+        },
+        async (payload) => {
+          const like = payload.new as any;
+          
+          // Check if this like is on current user's post
+          const { data: post } = await supabase
+            .from('posts')
+            .select('user_id, username, caption')
+            .eq('id', like.post_id)
+            .single();
+
+          if (post && post.user_id === user.id && like.user_id !== user.id) {
+            // Get the liker's profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', like.user_id)
+              .single();
+
+            // Create notification
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: user.id,
+                type: 'like',
+                title: 'New Like',
+                message: `${profile?.username || 'Someone'} liked your post`,
+                data: { post_id: like.post_id, liker_id: like.user_id }
+              });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'comments'
+        },
+        async (payload) => {
+          const comment = payload.new as any;
+          
+          // Check if this comment is on current user's post
+          const { data: post } = await supabase
+            .from('posts')
+            .select('user_id, username, caption')
+            .eq('id', comment.post_id)
+            .single();
+
+          if (post && post.user_id === user.id && comment.user_id !== user.id) {
+            // Get the commenter's profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', comment.user_id)
+              .single();
+
+            // Create notification
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: user.id,
+                type: 'comment',
+                title: 'New Comment',
+                message: `${profile?.username || 'Someone'} commented on your post`,
+                data: { post_id: comment.post_id, commenter_id: comment.user_id, comment_id: comment.id }
+              });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'followers'
+        },
+        async (payload) => {
+          const follow = payload.new as any;
+          
+          if (follow.following_id === user.id && follow.follower_id !== user.id) {
+            // Get the follower's profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('username')
+              .eq('id', follow.follower_id)
+              .single();
+
+            // Create notification
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: user.id,
+                type: 'follow',
+                title: 'New Follower',
+                message: `${profile?.username || 'Someone'} started following you`,
+                data: { follower_id: follow.follower_id }
+              });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bookings',
+          filter: `user_id=eq.${user.id}`
+        },
+        async (payload) => {
+          const booking = payload.new as any;
+          const oldBooking = payload.old as any;
+          
+          // Check if status changed or mechanic was assigned
+          if (booking.status !== oldBooking.status || 
+              (booking.assigned_mechanic_id && !oldBooking.assigned_mechanic_id)) {
+            
+            let title = 'Booking Update';
+            let message = 'Your booking has been updated';
+            
+            if (booking.status !== oldBooking.status) {
+              message = `Your booking status changed to ${booking.status}`;
+            } else if (booking.assigned_mechanic_id && !oldBooking.assigned_mechanic_id) {
+              title = 'Mechanic Assigned';
+              message = `A mechanic has been assigned to your booking`;
+            }
+
+            // Create notification
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: user.id,
+                type: 'booking',
+                title,
+                message,
+                data: { booking_id: booking.id }
+              });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(postsChannel);
     };
   };
 
