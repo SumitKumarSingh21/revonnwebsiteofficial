@@ -29,6 +29,11 @@ const Services = () => {
 
   useEffect(() => {
     fetchGarages();
+    setupRealtimeSubscription();
+
+    return () => {
+      supabase.removeAllChannels();
+    };
   }, []);
 
   const fetchGarages = async () => {
@@ -49,6 +54,69 @@ const Services = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const setupRealtimeSubscription = () => {
+    const garagesChannel = supabase
+      .channel('garages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'garages'
+        },
+        (payload) => {
+          console.log('Garage deleted:', payload.old);
+          // Remove the deleted garage from the list
+          setGarages(prev => prev.filter(garage => garage.id !== payload.old.id));
+          
+          toast({
+            title: "Garage Removed",
+            description: "A garage has been removed from the list",
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'garages'
+        },
+        (payload) => {
+          console.log('New garage added:', payload.new);
+          // Add the new garage to the list
+          setGarages(prev => [payload.new as Garage, ...prev]);
+          
+          toast({
+            title: "New Garage Added",
+            description: "A new garage has been added to the list",
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'garages'
+        },
+        (payload) => {
+          console.log('Garage updated:', payload.new);
+          // Update the garage in the list
+          setGarages(prev => 
+            prev.map(garage => 
+              garage.id === payload.new.id ? payload.new as Garage : garage
+            )
+          );
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(garagesChannel);
+    };
   };
 
   const filteredGarages = garages.filter(garage => {
