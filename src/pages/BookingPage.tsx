@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 
 interface Garage {
@@ -51,6 +53,8 @@ const BookingPage = () => {
   const [vehicleType, setVehicleType] = useState('car');
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [serviceType, setServiceType] = useState<'pickup' | 'home_service'>('pickup');
+  const [homeAddress, setHomeAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const { timeSlots, loading: timeSlotsLoading, formatTimeSlot } = useTimeSlots(garageId || '', bookingDate);
@@ -103,10 +107,17 @@ const BookingPage = () => {
   };
 
   const calculateTotal = () => {
-    return selectedServices.reduce((total, serviceId) => {
+    let baseTotal = selectedServices.reduce((total, serviceId) => {
       const service = services.find(s => s.id === serviceId);
       return total + (service?.price || 0);
     }, 0);
+
+    // Add service fee for home service
+    if (serviceType === 'home_service') {
+      baseTotal += 50; // $50 additional fee for home service
+    }
+
+    return baseTotal;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,7 +133,7 @@ const BookingPage = () => {
 
     if (selectedServices.length === 0) {
       toast({
-        title: "No Services Selected",
+        title: "No Services Selected", 
         description: "Please select at least one service",
         variant: "destructive",
       });
@@ -133,6 +144,15 @@ const BookingPage = () => {
       toast({
         title: "No Time Selected",
         description: "Please select a time slot",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (serviceType === 'home_service' && !homeAddress.trim()) {
+      toast({
+        title: "Address Required",
+        description: "Please provide your home address for home service",
         variant: "destructive",
       });
       return;
@@ -174,9 +194,9 @@ const BookingPage = () => {
             vehicle_make: vehicleMake,
             vehicle_model: vehicleModel,
             vehicle_type: vehicleType,
-            notes: notes,
+            notes: `${notes}${serviceType === 'home_service' ? `\n\nService Type: Home Service\nAddress: ${homeAddress}` : '\n\nService Type: Pickup Service'}`,
             payment_method: paymentMethod,
-            total_amount: service?.price || 0,
+            total_amount: calculateTotal(),
             status: 'confirmed',
             assigned_mechanic_id: availableMechanic.id,
             assigned_mechanic_name: availableMechanic.name,
@@ -190,7 +210,7 @@ const BookingPage = () => {
 
       toast({
         title: "Booking Confirmed!",
-        description: `Your booking${selectedServices.length > 1 ? 's have' : ' has'} been confirmed for ${bookingDate} at ${selectedTimeSlot}. Assigned mechanic: ${availableMechanic.name}`,
+        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking${selectedServices.length > 1 ? 's have' : ' has'} been confirmed for ${bookingDate} at ${selectedTimeSlot}. Assigned mechanic: ${availableMechanic.name}`,
       });
 
       navigate('/profile');
@@ -249,6 +269,61 @@ const BookingPage = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Service Type Selection */}
+              <div>
+                <Label className="text-base font-semibold">Service Type</Label>
+                <RadioGroup
+                  value={serviceType}
+                  onValueChange={(value: 'pickup' | 'home_service') => {
+                    console.log('Service type changed to:', value);
+                    setServiceType(value);
+                  }}
+                  className="mt-2"
+                >
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                    <RadioGroupItem value="pickup" id="pickup" />
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="w-4 h-4 text-blue-600" />
+                      <label htmlFor="pickup" className="text-sm font-medium cursor-pointer">
+                        Pickup Service
+                      </label>
+                    </div>
+                    <span className="text-xs text-gray-500 ml-auto">Bring vehicle to garage</span>
+                  </div>
+                  <div className="flex items-center space-x-2 p-3 border rounded-lg">
+                    <RadioGroupItem value="home_service" id="home_service" />
+                    <div className="flex items-center space-x-2">
+                      <Home className="w-4 h-4 text-green-600" />
+                      <label htmlFor="home_service" className="text-sm font-medium cursor-pointer">
+                        Home Service
+                      </label>
+                    </div>
+                    <span className="text-xs text-green-600 ml-auto">+$50 service fee</span>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {/* Home Address (only for home service) */}
+              {serviceType === 'home_service' && (
+                <div>
+                  <Label htmlFor="address">
+                    <Home className="w-4 h-4 inline mr-2" />
+                    Home Address
+                  </Label>
+                  <Textarea
+                    id="address"
+                    value={homeAddress}
+                    onChange={(e) => setHomeAddress(e.target.value)}
+                    placeholder="Enter your complete address for home service..."
+                    rows={3}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Please provide detailed address including landmarks for easy location
+                  </p>
+                </div>
+              )}
+
               {/* Services Selection */}
               <div>
                 <Label className="text-base font-semibold">Select Services</Label>
@@ -474,11 +549,28 @@ const BookingPage = () => {
               {/* Total */}
               {selectedServices.length > 0 && (
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold">Total Amount:</span>
-                    <span className="text-xl font-bold text-green-600">
-                      ${calculateTotal()}
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Services Total:</span>
+                      <span className="text-sm font-medium">
+                        ${selectedServices.reduce((total, serviceId) => {
+                          const service = services.find(s => s.id === serviceId);
+                          return total + (service?.price || 0);
+                        }, 0)}
+                      </span>
+                    </div>
+                    {serviceType === 'home_service' && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Home Service Fee:</span>
+                        <span className="text-sm font-medium text-green-600">+$50</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center border-t pt-2">
+                      <span className="text-lg font-semibold">Total Amount:</span>
+                      <span className="text-xl font-bold text-green-600">
+                        ${calculateTotal()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -488,7 +580,7 @@ const BookingPage = () => {
                 className="w-full"
                 disabled={isLoading || selectedServices.length === 0 || !selectedTimeSlot}
               >
-                {isLoading ? "Booking..." : "Confirm Booking"}
+                {isLoading ? "Booking..." : `Confirm ${serviceType === 'home_service' ? 'Home Service' : 'Pickup'} Booking`}
               </Button>
             </form>
           </CardContent>
