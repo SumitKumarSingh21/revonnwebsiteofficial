@@ -22,14 +22,14 @@ export const useTimeSlots = (garageId: string, selectedDate: string) => {
   } = useMechanicAvailability(garageId, selectedDate);
 
   useEffect(() => {
-    if (!garageId || !selectedDate) {
-      console.log('Missing garageId or selectedDate:', { garageId, selectedDate });
-      setTimeSlots([]);
-      setLoading(false);
-      return;
-    }
-
     const fetchTimeSlots = async () => {
+      if (!garageId || !selectedDate) {
+        console.log('Missing garageId or selectedDate:', { garageId, selectedDate });
+        setTimeSlots([]);
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         console.log('Fetching time slots for:', { garageId, selectedDate });
@@ -85,6 +85,8 @@ export const useTimeSlots = (garageId: string, selectedDate: string) => {
 
     return `${formatTime(startTime)} - ${formatTime(endTime)}`;
   };
+
+  console.log('Final available time slots:', availableTimeSlots.length);
 
   return {
     timeSlots: availableTimeSlots,

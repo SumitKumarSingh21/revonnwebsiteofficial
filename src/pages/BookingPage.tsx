@@ -54,7 +54,7 @@ const BookingPage = () => {
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [serviceType, setServiceType] = useState<'pickup' | 'home_service'>('pickup');
-  const [homeAddress, setHomeAddress] = useState('');
+  const [serviceAddress, setServiceAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const { timeSlots, loading: timeSlotsLoading, formatTimeSlot } = useTimeSlots(garageId || '', bookingDate);
@@ -114,7 +114,7 @@ const BookingPage = () => {
 
     // Add service fee for home service
     if (serviceType === 'home_service') {
-      baseTotal += 50; // $50 additional fee for home service
+      baseTotal += 49; // ₹49 additional fee for home service
     }
 
     return baseTotal;
@@ -149,10 +149,10 @@ const BookingPage = () => {
       return;
     }
 
-    if (serviceType === 'home_service' && !homeAddress.trim()) {
+    if (!serviceAddress.trim()) {
       toast({
         title: "Address Required",
-        description: "Please provide your home address for home service",
+        description: `Please provide your address for ${serviceType === 'home_service' ? 'home service' : 'pickup service'}`,
         variant: "destructive",
       });
       return;
@@ -194,7 +194,7 @@ const BookingPage = () => {
             vehicle_make: vehicleMake,
             vehicle_model: vehicleModel,
             vehicle_type: vehicleType,
-            notes: `${notes}${serviceType === 'home_service' ? `\n\nService Type: Home Service\nAddress: ${homeAddress}` : '\n\nService Type: Pickup Service'}`,
+            notes: `${notes}${serviceType === 'home_service' ? `\n\nService Type: Home Service\nAddress: ${serviceAddress}` : `\n\nService Type: Pickup Service\nAddress: ${serviceAddress}`}`,
             payment_method: paymentMethod,
             total_amount: calculateTotal(),
             status: 'confirmed',
@@ -288,7 +288,7 @@ const BookingPage = () => {
                         Pickup Service
                       </label>
                     </div>
-                    <span className="text-xs text-gray-500 ml-auto">Bring vehicle to garage</span>
+                    <span className="text-xs text-gray-500 ml-auto">We'll pickup & deliver your vehicle</span>
                   </div>
                   <div className="flex items-center space-x-2 p-3 border rounded-lg">
                     <RadioGroupItem value="home_service" id="home_service" />
@@ -298,31 +298,29 @@ const BookingPage = () => {
                         Home Service
                       </label>
                     </div>
-                    <span className="text-xs text-green-600 ml-auto">+$50 service fee</span>
+                    <span className="text-xs text-green-600 ml-auto">+₹49 service fee</span>
                   </div>
                 </RadioGroup>
               </div>
 
-              {/* Home Address (only for home service) */}
-              {serviceType === 'home_service' && (
-                <div>
-                  <Label htmlFor="address">
-                    <Home className="w-4 h-4 inline mr-2" />
-                    Home Address
-                  </Label>
-                  <Textarea
-                    id="address"
-                    value={homeAddress}
-                    onChange={(e) => setHomeAddress(e.target.value)}
-                    placeholder="Enter your complete address for home service..."
-                    rows={3}
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Please provide detailed address including landmarks for easy location
-                  </p>
-                </div>
-              )}
+              {/* Service Address */}
+              <div>
+                <Label htmlFor="address">
+                  <MapPin className="w-4 h-4 inline mr-2" />
+                  {serviceType === 'home_service' ? 'Home Address' : 'Pickup Address'}
+                </Label>
+                <Textarea
+                  id="address"
+                  value={serviceAddress}
+                  onChange={(e) => setServiceAddress(e.target.value)}
+                  placeholder={`Enter your ${serviceType === 'home_service' ? 'home' : 'pickup'} address...`}
+                  rows={3}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Please provide detailed address including landmarks for easy location
+                </p>
+              </div>
 
               {/* Services Selection */}
               <div>
@@ -345,7 +343,7 @@ const BookingPage = () => {
                         <p className="text-xs text-gray-500 mt-1">{service.description}</p>
                         <div className="flex items-center space-x-4 mt-2">
                           <span className="text-sm font-semibold text-green-600">
-                            ${service.price}
+                            ₹{service.price}
                           </span>
                           <span className="text-xs text-gray-500">
                             {service.duration} minutes
@@ -553,7 +551,7 @@ const BookingPage = () => {
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Services Total:</span>
                       <span className="text-sm font-medium">
-                        ${selectedServices.reduce((total, serviceId) => {
+                        ₹{selectedServices.reduce((total, serviceId) => {
                           const service = services.find(s => s.id === serviceId);
                           return total + (service?.price || 0);
                         }, 0)}
@@ -562,13 +560,13 @@ const BookingPage = () => {
                     {serviceType === 'home_service' && (
                       <div className="flex justify-between items-center">
                         <span className="text-sm">Home Service Fee:</span>
-                        <span className="text-sm font-medium text-green-600">+$50</span>
+                        <span className="text-sm font-medium text-green-600">+₹49</span>
                       </div>
                     )}
                     <div className="flex justify-between items-center border-t pt-2">
                       <span className="text-lg font-semibold">Total Amount:</span>
                       <span className="text-xl font-bold text-green-600">
-                        ${calculateTotal()}
+                        ₹{calculateTotal()}
                       </span>
                     </div>
                   </div>
@@ -578,7 +576,7 @@ const BookingPage = () => {
               <Button
                 type="submit"
                 className="w-full"
-                disabled={isLoading || selectedServices.length === 0 || !selectedTimeSlot}
+                disabled={isLoading || selectedServices.length === 0 || !selectedTimeSlot || !serviceAddress.trim()}
               >
                 {isLoading ? "Booking..." : `Confirm ${serviceType === 'home_service' ? 'Home Service' : 'Pickup'} Booking`}
               </Button>
