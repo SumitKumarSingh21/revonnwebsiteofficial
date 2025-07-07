@@ -164,53 +164,53 @@ const BookingPage = () => {
       // Get available mechanic for the selected time slot
       const availableMechanic = getAvailableMechanicForSlot(selectedTimeSlot);
       
-      if (!availableMechanic) {
-        toast({
-          title: "No Mechanic Available",
-          description: "No mechanic is available for the selected time slot. Please choose a different time.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      console.log('Assigning mechanic:', availableMechanic.name, 'for time slot:', selectedTimeSlot);
+      console.log('Available mechanic for booking:', availableMechanic);
 
       // Create booking for each selected service
       const bookingPromises = selectedServices.map(async (serviceId) => {
         const service = services.find(s => s.id === serviceId);
         
+        const bookingData: any = {
+          user_id: user.id,
+          garage_id: garageId!,
+          service_id: serviceId,
+          booking_date: bookingDate,
+          booking_time: selectedTimeSlot,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          customer_phone: customerPhone,
+          vehicle_make: vehicleMake,
+          vehicle_model: vehicleModel,
+          vehicle_type: vehicleType,
+          notes: `${notes}${serviceType === 'home_service' ? `\n\nService Type: Home Service\nAddress: ${serviceAddress}` : `\n\nService Type: Pickup Service\nAddress: ${serviceAddress}`}`,
+          payment_method: paymentMethod,
+          total_amount: calculateTotal(),
+          status: 'confirmed'
+        };
+
+        // Only assign mechanic if one is available
+        if (availableMechanic) {
+          bookingData.assigned_mechanic_id = availableMechanic.id;
+          bookingData.assigned_mechanic_name = availableMechanic.name;
+          bookingData.assigned_at = new Date().toISOString();
+        }
+
         const { error } = await supabase
           .from('bookings')
-          .insert({
-            user_id: user.id,
-            garage_id: garageId!,
-            service_id: serviceId,
-            booking_date: bookingDate,
-            booking_time: selectedTimeSlot,
-            customer_name: customerName,
-            customer_email: customerEmail,
-            customer_phone: customerPhone,
-            vehicle_make: vehicleMake,
-            vehicle_model: vehicleModel,
-            vehicle_type: vehicleType,
-            notes: `${notes}${serviceType === 'home_service' ? `\n\nService Type: Home Service\nAddress: ${serviceAddress}` : `\n\nService Type: Pickup Service\nAddress: ${serviceAddress}`}`,
-            payment_method: paymentMethod,
-            total_amount: calculateTotal(),
-            status: 'confirmed',
-            assigned_mechanic_id: availableMechanic.id,
-            assigned_mechanic_name: availableMechanic.name,
-            assigned_at: new Date().toISOString()
-          });
+          .insert(bookingData);
 
         if (error) throw error;
       });
 
       await Promise.all(bookingPromises);
 
+      const mechanicMessage = availableMechanic 
+        ? `Assigned mechanic: ${availableMechanic.name}`
+        : 'Mechanic will be assigned by the garage owner';
+
       toast({
         title: "Booking Confirmed!",
-        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking${selectedServices.length > 1 ? 's have' : ' has'} been confirmed for ${bookingDate} at ${selectedTimeSlot}. Assigned mechanic: ${availableMechanic.name}`,
+        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking${selectedServices.length > 1 ? 's have' : ' has'} been confirmed for ${bookingDate} at ${selectedTimeSlot}. ${mechanicMessage}`,
       });
 
       navigate('/profile');
@@ -395,7 +395,7 @@ const BookingPage = () => {
                             key={slot.id}
                             type="button"
                             variant={selectedTimeSlot === slot.start_time ? "default" : "outline"}
-                            className="justify-start"
+                            className="justify-start text-sm h-auto py-2 px-3"
                             onClick={() => {
                               console.log('Time slot selected:', slot.start_time);
                               setSelectedTimeSlot(slot.start_time);
@@ -406,8 +406,9 @@ const BookingPage = () => {
                         ))}
                       </div>
                     ) : (
-                      <div className="text-center py-4">
-                        <p className="text-gray-500 text-sm">
+                      <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
+                        <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500 text-sm font-medium">
                           No available time slots for this date
                         </p>
                         <p className="text-xs text-gray-400 mt-1">
@@ -417,9 +418,12 @@ const BookingPage = () => {
                     )}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm mt-2">
-                    Please select a date to see available time slots
-                  </p>
+                  <div className="text-center py-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <Calendar className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500 text-sm">
+                      Please select a date to see available time slots
+                    </p>
+                  </div>
                 )}
               </div>
 
