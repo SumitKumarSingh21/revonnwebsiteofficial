@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -166,6 +165,16 @@ const BookingPage = () => {
       
       console.log('Available mechanic for booking:', availableMechanic);
 
+      // Get selected services with their names
+      const selectedServiceDetails = selectedServices.map(serviceId => {
+        const service = services.find(s => s.id === serviceId);
+        return {
+          id: serviceId,
+          name: service?.name || 'Unknown Service',
+          price: service?.price || 0
+        };
+      });
+
       // Create booking for each selected service
       const bookingPromises = selectedServices.map(async (serviceId) => {
         const service = services.find(s => s.id === serviceId);
@@ -182,9 +191,9 @@ const BookingPage = () => {
           vehicle_make: vehicleMake,
           vehicle_model: vehicleModel,
           vehicle_type: vehicleType,
-          notes: `${notes}${serviceType === 'home_service' ? `\n\nService Type: Home Service\nAddress: ${serviceAddress}` : `\n\nService Type: Pickup Service\nAddress: ${serviceAddress}`}`,
+          notes: `Service: ${service?.name || 'Unknown Service'}\nService Type: ${serviceType === 'home_service' ? 'Home Service' : 'Pickup Service'}\nAddress: ${serviceAddress}${notes ? `\n\nAdditional Notes: ${notes}` : ''}`,
           payment_method: paymentMethod,
-          total_amount: calculateTotal(),
+          total_amount: service?.price || 0,
           status: 'confirmed'
         };
 
@@ -208,9 +217,11 @@ const BookingPage = () => {
         ? `Assigned mechanic: ${availableMechanic.name}`
         : 'Mechanic will be assigned by the garage owner';
 
+      const serviceNames = selectedServiceDetails.map(service => service.name).join(', ');
+
       toast({
         title: "Booking Confirmed!",
-        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking${selectedServices.length > 1 ? 's have' : ' has'} been confirmed for ${bookingDate} at ${selectedTimeSlot}. ${mechanicMessage}`,
+        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking for ${serviceNames} has been confirmed for ${bookingDate} at ${selectedTimeSlot}. ${mechanicMessage}`,
       });
 
       navigate('/profile');
