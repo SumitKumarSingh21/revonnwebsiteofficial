@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Star, Search, Filter, ArrowLeft, Car, Bike } from 'lucide-react';
@@ -29,36 +28,10 @@ const Services = () => {
 
   useEffect(() => {
     fetchGarages();
-    setupRealtimeSubscription();
-
-    return () => {
-      supabase.removeAllChannels();
-    };
-  }, []);
-
-  const fetchGarages = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('garages')
-        .select('*')
-        .order('rating', { ascending: false });
-
-      if (error) throw error;
-      setGarages(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load garages",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const setupRealtimeSubscription = () => {
-    const garagesChannel = supabase
-      .channel('garages-changes')
+    
+    // Set up real-time subscription with improved error handling
+    const channel = supabase
+      .channel('garages-realtime')
       .on(
         'postgres_changes',
         {
@@ -67,13 +40,17 @@ const Services = () => {
           table: 'garages'
         },
         (payload) => {
-          console.log('Garage deleted:', payload.old);
-          // Remove the deleted garage from the list
-          setGarages(prev => prev.filter(garage => garage.id !== payload.old.id));
+          console.log('Garage deleted in real-time:', payload.old);
+          setGarages(prev => {
+            const filtered = prev.filter(garage => garage.id !== payload.old.id);
+            console.log('Updated garage list after deletion:', filtered.length);
+            return filtered;
+          });
           
           toast({
             title: "Garage Removed",
-            description: "A garage has been removed from the list",
+            description: "A garage has been removed and is no longer available",
+            variant: "default",
           });
         }
       )
@@ -86,12 +63,11 @@ const Services = () => {
         },
         (payload) => {
           console.log('New garage added:', payload.new);
-          // Add the new garage to the list
           setGarages(prev => [payload.new as Garage, ...prev]);
           
           toast({
             title: "New Garage Added",
-            description: "A new garage has been added to the list",
+            description: "A new garage is now available for bookings",
           });
         }
       )
@@ -104,7 +80,6 @@ const Services = () => {
         },
         (payload) => {
           console.log('Garage updated:', payload.new);
-          // Update the garage in the list
           setGarages(prev => 
             prev.map(garage => 
               garage.id === payload.new.id ? payload.new as Garage : garage
@@ -112,11 +87,44 @@ const Services = () => {
           );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to garage changes');
+        }
+      });
 
     return () => {
-      supabase.removeChannel(garagesChannel);
+      console.log('Cleaning up subscription');
+      supabase.removeChannel(channel);
     };
+  }, []);
+
+  const fetchGarages = async () => {
+    try {
+      console.log('Fetching garages...');
+      const { data, error } = await supabase
+        .from('garages')
+        .select('*')
+        .order('rating', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching garages:', error);
+        throw error;
+      }
+      
+      console.log('Fetched garages:', data?.length || 0);
+      setGarages(data || []);
+    } catch (error: any) {
+      console.error('Failed to load garages:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load garages. Please refresh the page.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const filteredGarages = garages.filter(garage => {
