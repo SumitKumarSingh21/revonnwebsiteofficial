@@ -144,7 +144,7 @@ const Index = () => {
               <Download className="mr-2 h-5 w-5" />
               Download the App
             </Button>
-            <Button size="lg" variant="outline" className="border-white text-white hover:bg-white hover:text-red-600 px-8 py-4" asChild>
+            <Button size="lg" variant="outline" className="border-white text-red-600 hover:bg-gray hover:text-red-600 px-8 py-4" asChild>
               <Link to="/community">
                 <Users className="mr-2 h-5 w-5" />
                 Explore Community
