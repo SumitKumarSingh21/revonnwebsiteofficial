@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
-
 const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,33 +21,38 @@ const Auth = () => {
   const [authMethod, setAuthMethod] = useState<'email' | 'phone'>('email');
   const navigate = useNavigate();
   const location = useLocation();
-
   const from = location.state?.from?.pathname || '/';
-
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: {
+          session
+        }
+      } = await supabase.auth.getSession();
       if (session?.user) {
-        navigate(from, { replace: true });
+        navigate(from, {
+          replace: true
+        });
       }
     };
     checkUser();
   }, [navigate, from]);
-
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       // Clean up any existing auth state first
       try {
-        await supabase.auth.signOut({ scope: 'global' });
+        await supabase.auth.signOut({
+          scope: 'global'
+        });
       } catch (err) {
         // Continue even if this fails
       }
-
-      const { error } = await supabase.auth.signUp({
+      const {
+        error
+      } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -59,20 +63,19 @@ const Auth = () => {
           }
         }
       });
-
       if (error) {
         // Handle specific error cases
         if (error.message.includes('already registered')) {
           toast({
             title: "Account already exists",
             description: "This email is already registered. Please sign in instead.",
-            variant: "destructive",
+            variant: "destructive"
           });
         } else if (error.message.includes('Password')) {
           toast({
             title: "Password Error",
             description: "Password must be at least 6 characters long.",
-            variant: "destructive",
+            variant: "destructive"
           });
         } else {
           throw error;
@@ -80,9 +83,9 @@ const Auth = () => {
       } else {
         toast({
           title: "Success!",
-          description: "Account created successfully! Please check your email to verify your account.",
+          description: "Account created successfully! Please check your email to verify your account."
         });
-        
+
         // Clear form
         setEmail('');
         setPassword('');
@@ -94,28 +97,29 @@ const Auth = () => {
       toast({
         title: "Error",
         description: error.message || "An unexpected error occurred during signup.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handlePhoneSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       // Clean up any existing auth state first
       try {
-        await supabase.auth.signOut({ scope: 'global' });
+        await supabase.auth.signOut({
+          scope: 'global'
+        });
       } catch (err) {
         // Continue even if this fails
       }
-
       if (!otpSent) {
         // Send OTP to phone number
-        const { error } = await supabase.auth.signInWithOtp({
+        const {
+          error
+        } = await supabase.auth.signInWithOtp({
           phone: phone,
           options: {
             data: {
@@ -123,13 +127,12 @@ const Auth = () => {
             }
           }
         });
-
         if (error) {
           if (error.message.includes('Invalid phone number')) {
             toast({
               title: "Invalid Phone Number",
               description: "Please enter a valid phone number with country code (e.g., +1234567890).",
-              variant: "destructive",
+              variant: "destructive"
             });
           } else {
             throw error;
@@ -138,23 +141,24 @@ const Auth = () => {
           setOtpSent(true);
           toast({
             title: "OTP Sent!",
-            description: "Please check your phone for the verification code.",
+            description: "Please check your phone for the verification code."
           });
         }
       } else {
         // Verify OTP
-        const { error } = await supabase.auth.verifyOtp({
+        const {
+          error
+        } = await supabase.auth.verifyOtp({
           phone: phone,
           token: otp,
           type: 'sms'
         });
-
         if (error) {
           if (error.message.includes('Invalid token')) {
             toast({
               title: "Invalid OTP",
               description: "Please check your verification code and try again.",
-              variant: "destructive",
+              variant: "destructive"
             });
           } else {
             throw error;
@@ -162,7 +166,7 @@ const Auth = () => {
         } else {
           toast({
             title: "Success!",
-            description: "Phone number verified successfully!",
+            description: "Phone number verified successfully!"
           });
           // Force page reload for clean state
           window.location.href = from;
@@ -173,37 +177,37 @@ const Auth = () => {
       toast({
         title: "Error",
         description: error.message || "An unexpected error occurred during phone signup.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handlePhoneSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       // Clean up any existing auth state first
       try {
-        await supabase.auth.signOut({ scope: 'global' });
+        await supabase.auth.signOut({
+          scope: 'global'
+        });
       } catch (err) {
         // Continue even if this fails
       }
-
       if (!otpSent) {
         // Send OTP to phone number
-        const { error } = await supabase.auth.signInWithOtp({
+        const {
+          error
+        } = await supabase.auth.signInWithOtp({
           phone: phone
         });
-
         if (error) {
           if (error.message.includes('Invalid phone number')) {
             toast({
               title: "Invalid Phone Number",
               description: "Please enter a valid phone number with country code (e.g., +1234567890).",
-              variant: "destructive",
+              variant: "destructive"
             });
           } else {
             throw error;
@@ -212,23 +216,24 @@ const Auth = () => {
           setOtpSent(true);
           toast({
             title: "OTP Sent!",
-            description: "Please check your phone for the verification code.",
+            description: "Please check your phone for the verification code."
           });
         }
       } else {
         // Verify OTP
-        const { error } = await supabase.auth.verifyOtp({
+        const {
+          error
+        } = await supabase.auth.verifyOtp({
           phone: phone,
           token: otp,
           type: 'sms'
         });
-
         if (error) {
           if (error.message.includes('Invalid token')) {
             toast({
               title: "Invalid OTP",
               description: "Please check your verification code and try again.",
-              variant: "destructive",
+              variant: "destructive"
             });
           } else {
             throw error;
@@ -243,36 +248,36 @@ const Auth = () => {
       toast({
         title: "Error",
         description: error.message || "An unexpected error occurred during phone signin.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       // Clean up any existing auth state first
       try {
-        await supabase.auth.signOut({ scope: 'global' });
+        await supabase.auth.signOut({
+          scope: 'global'
+        });
       } catch (err) {
         // Continue even if this fails
       }
-
-      const { error } = await supabase.auth.signInWithPassword({
+      const {
+        error
+      } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
-
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
           toast({
             title: "Invalid Credentials",
             description: "Please check your email and password and try again.",
-            variant: "destructive",
+            variant: "destructive"
           });
         } else {
           throw error;
@@ -286,20 +291,17 @@ const Auth = () => {
       toast({
         title: "Error",
         description: error.message || "An unexpected error occurred during signin.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   const resetOtpFlow = () => {
     setOtpSent(false);
     setOtp('');
   };
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="mb-6">
           <Button variant="ghost" size="sm" asChild>
@@ -325,62 +327,26 @@ const Auth = () => {
               <TabsContent value="signin">
                 <div className="mb-4">
                   <div className="flex rounded-lg border p-1">
-                    <Button
-                      type="button"
-                      variant={authMethod === 'email' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setAuthMethod('email');
-                        resetOtpFlow();
-                      }}
-                    >
+                    <Button type="button" variant={authMethod === 'email' ? 'default' : 'ghost'} size="sm" className="flex-1" onClick={() => {
+                    setAuthMethod('email');
+                    resetOtpFlow();
+                  }}>
                       Email
                     </Button>
-                    <Button
-                      type="button"
-                      variant={authMethod === 'phone' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setAuthMethod('phone');
-                        resetOtpFlow();
-                      }}
-                    >
-                      Phone
-                    </Button>
+                    
                   </div>
                 </div>
 
-                {authMethod === 'email' ? (
-                  <form onSubmit={handleSignIn} className="space-y-4">
+                {authMethod === 'email' ? <form onSubmit={handleSignIn} className="space-y-4">
                     <div>
                       <Label htmlFor="signin-email">Email</Label>
-                      <Input
-                        id="signin-email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
+                      <Input id="signin-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
                     <div>
                       <Label htmlFor="signin-password">Password</Label>
                       <div className="relative">
-                        <Input
-                          id="signin-password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
+                        <Input id="signin-password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required />
+                        <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -388,24 +354,13 @@ const Auth = () => {
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? "Signing in..." : "Sign In"}
                     </Button>
-                  </form>
-                ) : (
-                  <form onSubmit={handlePhoneSignIn} className="space-y-4">
+                  </form> : <form onSubmit={handlePhoneSignIn} className="space-y-4">
                     <div>
                       <Label htmlFor="signin-phone">Phone Number</Label>
-                      <Input
-                        id="signin-phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+1234567890"
-                        required
-                        disabled={otpSent}
-                      />
+                      <Input id="signin-phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1234567890" required disabled={otpSent} />
                     </div>
                     
-                    {otpSent && (
-                      <div className="space-y-2">
+                    {otpSent && <div className="space-y-2">
                         <Label htmlFor="signin-otp">Enter OTP</Label>
                         <div className="flex justify-center">
                           <InputOTP value={otp} onChange={setOtp} maxLength={6}>
@@ -419,105 +374,48 @@ const Auth = () => {
                             </InputOTPGroup>
                           </InputOTP>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={resetOtpFlow}
-                          className="w-full"
-                        >
+                        <Button type="button" variant="ghost" size="sm" onClick={resetOtpFlow} className="w-full">
                           Change Phone Number
                         </Button>
-                      </div>
-                    )}
+                      </div>}
 
-                    <Button type="submit" className="w-full" disabled={isLoading || (otpSent && otp.length !== 6)}>
+                    <Button type="submit" className="w-full" disabled={isLoading || otpSent && otp.length !== 6}>
                       {isLoading ? "Processing..." : otpSent ? "Verify OTP" : "Send OTP"}
                     </Button>
-                  </form>
-                )}
+                  </form>}
               </TabsContent>
 
               <TabsContent value="signup">
                 <div className="mb-4">
                   <div className="flex rounded-lg border p-1">
-                    <Button
-                      type="button"
-                      variant={authMethod === 'email' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setAuthMethod('email');
-                        resetOtpFlow();
-                      }}
-                    >
+                    <Button type="button" variant={authMethod === 'email' ? 'default' : 'ghost'} size="sm" className="flex-1" onClick={() => {
+                    setAuthMethod('email');
+                    resetOtpFlow();
+                  }}>
                       Email
                     </Button>
-                    <Button
-                      type="button"
-                      variant={authMethod === 'phone' ? 'default' : 'ghost'}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        setAuthMethod('phone');
-                        resetOtpFlow();
-                      }}
-                    >
-                      Phone
-                    </Button>
+                    
                   </div>
                 </div>
 
-                {authMethod === 'email' ? (
-                  <form onSubmit={handleSignUp} className="space-y-4">
+                {authMethod === 'email' ? <form onSubmit={handleSignUp} className="space-y-4">
                     <div>
                       <Label htmlFor="signup-name">Full Name</Label>
-                      <Input
-                        id="signup-name"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        required
-                      />
+                      <Input id="signup-name" type="text" value={fullName} onChange={e => setFullName(e.target.value)} required />
                     </div>
                     <div>
                       <Label htmlFor="signup-phone">Phone Number</Label>
-                      <Input
-                        id="signup-phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+1234567890"
-                      />
+                      <Input id="signup-phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1234567890" />
                     </div>
                     <div>
                       <Label htmlFor="signup-email">Email</Label>
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
+                      <Input id="signup-email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
                     </div>
                     <div>
                       <Label htmlFor="signup-password">Password</Label>
                       <div className="relative">
-                        <Input
-                          id="signup-password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                          minLength={6}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
+                        <Input id="signup-password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+                        <Button type="button" variant="ghost" size="sm" className="absolute right-0 top-0 h-full px-3" onClick={() => setShowPassword(!showPassword)}>
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
@@ -525,35 +423,17 @@ const Auth = () => {
                     <Button type="submit" className="w-full" disabled={isLoading}>
                       {isLoading ? "Creating account..." : "Sign Up"}
                     </Button>
-                  </form>
-                ) : (
-                  <form onSubmit={handlePhoneSignUp} className="space-y-4">
+                  </form> : <form onSubmit={handlePhoneSignUp} className="space-y-4">
                     <div>
                       <Label htmlFor="signup-name-phone">Full Name</Label>
-                      <Input
-                        id="signup-name-phone"
-                        type="text"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        required
-                        disabled={otpSent}
-                      />
+                      <Input id="signup-name-phone" type="text" value={fullName} onChange={e => setFullName(e.target.value)} required disabled={otpSent} />
                     </div>
                     <div>
                       <Label htmlFor="signup-phone-number">Phone Number</Label>
-                      <Input
-                        id="signup-phone-number"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+1234567890"
-                        required
-                        disabled={otpSent}
-                      />
+                      <Input id="signup-phone-number" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1234567890" required disabled={otpSent} />
                     </div>
                     
-                    {otpSent && (
-                      <div className="space-y-2">
+                    {otpSent && <div className="space-y-2">
                         <Label htmlFor="signup-otp">Enter OTP</Label>
                         <div className="flex justify-center">
                           <InputOTP value={otp} onChange={setOtp} maxLength={6}>
@@ -567,30 +447,20 @@ const Auth = () => {
                             </InputOTPGroup>
                           </InputOTP>
                         </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={resetOtpFlow}
-                          className="w-full"
-                        >
+                        <Button type="button" variant="ghost" size="sm" onClick={resetOtpFlow} className="w-full">
                           Change Phone Number
                         </Button>
-                      </div>
-                    )}
+                      </div>}
 
-                    <Button type="submit" className="w-full" disabled={isLoading || (otpSent && otp.length !== 6)}>
+                    <Button type="submit" className="w-full" disabled={isLoading || otpSent && otp.length !== 6}>
                       {isLoading ? "Processing..." : otpSent ? "Verify & Create Account" : "Send OTP"}
                     </Button>
-                  </form>
-                )}
+                  </form>}
               </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Auth;
