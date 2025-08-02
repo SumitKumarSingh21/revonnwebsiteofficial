@@ -1,12 +1,9 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Car, Bike, CheckCircle, MapPin, Wrench, DollarSign, Star, ArrowRight, Download, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
 const Index = () => {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
+  return <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
       {/* Navigation */}
       <nav className="bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -161,13 +158,9 @@ const Index = () => {
             <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-6 w-6" />
             <span className="text-xl font-bold">Revonn</span>
           </div>
-          <p className="text-gray-400">
-            © 2024 Revonn. All rights reserved. | Your trusted vehicle service platform.
-          </p>
+          <p className="text-gray-400">© 2025 Revonn. All rights reserved. | Your trusted vehicle service platform.</p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
