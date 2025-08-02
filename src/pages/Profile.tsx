@@ -49,6 +49,12 @@ interface Booking {
   assigned_mechanic_id?: string;
   assigned_mechanic_name?: string;
   assigned_at?: string;
+  service_names?: string;
+  service_details?: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }>;
   mechanic_details?: {
     mechanic_id: string;
     name: string;
@@ -369,7 +375,17 @@ const Profile = () => {
         })
       );
 
-      setBookings(bookingsWithMechanicDetails);
+      // Parse service_details JSON for proper typing
+      const typedBookings = bookingsWithMechanicDetails.map(booking => ({
+        ...booking,
+        service_details: Array.isArray(booking.service_details) 
+          ? booking.service_details 
+          : booking.service_details 
+            ? JSON.parse(booking.service_details as string)
+            : undefined
+      }));
+      
+      setBookings(typedBookings);
     } catch (error: any) {
       console.error('Error fetching bookings:', error);
     }
@@ -958,7 +974,24 @@ const Profile = () => {
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <h3 className="font-semibold">Service Booking</h3>
-                              <p className="text-gray-600">
+                              {booking.service_names ? (
+                                <div className="mt-1">
+                                  <p className="text-sm font-medium text-blue-600">{booking.service_names}</p>
+                                  {booking.service_details && booking.service_details.length > 1 && (
+                                    <div className="mt-2 space-y-1">
+                                      {booking.service_details.map((service: any, index: number) => (
+                                        <div key={index} className="flex justify-between text-xs text-gray-500">
+                                          <span>{service.name}</span>
+                                          <span>₹{service.price}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-gray-600 text-sm">Single Service</p>
+                              )}
+                              <p className="text-gray-600 mt-1">
                                 {booking.vehicle_make} {booking.vehicle_model}
                               </p>
                               <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">

@@ -66,7 +66,9 @@ export type Database = {
           id: string
           notes: string | null
           payment_method: string | null
+          service_details: Json | null
           service_id: string
+          service_names: string | null
           status: string | null
           total_amount: number | null
           user_id: string
@@ -89,7 +91,9 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          service_details?: Json | null
           service_id: string
+          service_names?: string | null
           status?: string | null
           total_amount?: number | null
           user_id: string
@@ -112,7 +116,9 @@ export type Database = {
           id?: string
           notes?: string | null
           payment_method?: string | null
+          service_details?: Json | null
           service_id?: string
+          service_names?: string | null
           status?: string | null
           total_amount?: number | null
           user_id?: string

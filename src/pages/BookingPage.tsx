@@ -175,49 +175,61 @@ const BookingPage = () => {
         };
       });
 
-      // Create booking for each selected service
-      const bookingPromises = selectedServices.map(async (serviceId) => {
-        const service = services.find(s => s.id === serviceId);
-        
-        const bookingData: any = {
-          user_id: user.id,
-          garage_id: garageId!,
-          service_id: serviceId,
-          booking_date: bookingDate,
-          booking_time: selectedTimeSlot,
-          customer_name: customerName,
-          customer_email: customerEmail,
-          customer_phone: customerPhone,
-          vehicle_make: vehicleMake,
-          vehicle_model: vehicleModel,
-          vehicle_type: vehicleType,
-          notes: `Service: ${service?.name || 'Unknown Service'}\nService Type: ${serviceType === 'home_service' ? 'Home Service' : 'Pickup Service'}\nAddress: ${serviceAddress}${notes ? `\n\nAdditional Notes: ${notes}` : ''}`,
-          payment_method: paymentMethod,
-          total_amount: service?.price || 0,
-          status: 'confirmed'
-        };
+      // Create a single booking with all selected services
+      const totalAmount = calculateTotal();
+      const serviceNames = selectedServiceDetails.map(s => s.name).join(', ');
+      
+      const bookingData: any = {
+        user_id: user.id,
+        garage_id: garageId!,
+        service_id: selectedServices[0], // Use first service as primary for backward compatibility
+        booking_date: bookingDate,
+        booking_time: selectedTimeSlot,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone,
+        vehicle_make: vehicleMake,
+        vehicle_model: vehicleModel,
+        vehicle_type: vehicleType,
+        notes: `Services: ${serviceNames}\nService Type: ${serviceType === 'home_service' ? 'Home Service' : 'Pickup Service'}\nAddress: ${serviceAddress}${notes ? `\n\nAdditional Notes: ${notes}` : ''}`,
+        payment_method: paymentMethod,
+        total_amount: totalAmount,
+        status: 'confirmed',
+        service_details: selectedServiceDetails,
+        service_names: serviceNames
+      };
 
-        // Only assign mechanic if one is available
-        if (availableMechanic) {
-          bookingData.assigned_mechanic_id = availableMechanic.id;
-          bookingData.assigned_mechanic_name = availableMechanic.name;
-          bookingData.assigned_at = new Date().toISOString();
-        }
+      // Only assign mechanic if one is available
+      if (availableMechanic) {
+        bookingData.assigned_mechanic_id = availableMechanic.id;
+        bookingData.assigned_mechanic_name = availableMechanic.name;
+        bookingData.assigned_at = new Date().toISOString();
+      }
 
-        const { error } = await supabase
-          .from('bookings')
-          .insert(bookingData);
+      // Insert the single booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .insert(bookingData)
+        .select()
+        .single();
 
-        if (error) throw error;
-      });
+      if (bookingError) throw bookingError;
 
-      await Promise.all(bookingPromises);
+      // Insert service associations into booking_services table
+      const bookingServicePromises = selectedServices.map(serviceId => 
+        supabase
+          .from('booking_services')
+          .insert({
+            booking_id: booking.id,
+            service_id: serviceId
+          })
+      );
+
+      await Promise.all(bookingServicePromises);
 
       const mechanicMessage = availableMechanic 
         ? `Assigned mechanic: ${availableMechanic.name}`
         : 'Mechanic will be assigned by the garage owner';
-
-      const serviceNames = selectedServiceDetails.map(service => service.name).join(', ');
 
       toast({
         title: "Booking Confirmed!",
