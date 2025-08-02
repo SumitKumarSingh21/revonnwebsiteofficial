@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      booking_services: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          service_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          service_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          service_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_services_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           assigned_at: string | null
@@ -518,6 +554,36 @@ export type Database = {
         }
         Relationships: []
       }
+      predefined_time_slots: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          garage_id: string
+          id: string
+          is_available: boolean
+          start_time: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          garage_id: string
+          id?: string
+          is_available?: boolean
+          start_time: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          garage_id?: string
+          id?: string
+          is_available?: boolean
+          start_time?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -673,6 +739,10 @@ export type Database = {
       generate_mechanic_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      generate_predefined_time_slots: {
+        Args: { p_garage_id: string }
+        Returns: undefined
       }
       get_post_comments: {
         Args: { p_post_id: string }
