@@ -76,7 +76,10 @@ const LoginForm = () => {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-background">
       <Card className="w-full max-w-md">
-        <CardHeader className="text-center space-y-2 pb-6">
+        <CardHeader className="text-center space-y-4 pb-6">
+          <div className="flex justify-center">
+            <img src="/lovable-uploads/aaae1da6-0e09-46c6-8523-ec04acbc268d.png" alt="Revonn Logo" className="h-16 w-16" />
+          </div>
           <h1 className="text-2xl font-bold text-foreground">Welcome back to Revonn</h1>
           <p className="text-muted-foreground">Log in to access trusted garage services</p>
         </CardHeader>
