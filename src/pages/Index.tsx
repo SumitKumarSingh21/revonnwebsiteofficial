@@ -19,6 +19,9 @@ const Index = () => {
               <Link to="/services" className="text-gray-700 hover:text-red-600 transition-colors">Services</Link>
               <Link to="/community" className="text-gray-700 hover:text-red-600 transition-colors">Community</Link>
               <Link to="/profile" className="text-gray-700 hover:text-red-600 transition-colors">Profile</Link>
+              <Button asChild variant="outline" className="mr-4">
+                <Link to="/auth?mode=login">Log In</Link>
+              </Button>
               <Button asChild className="bg-red-600 hover:bg-red-700">
                 <Link to="/services">Book Now</Link>
               </Button>
