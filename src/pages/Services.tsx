@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import FilterModal from '@/components/FilterModal';
 interface Garage {
   id: string;
   name: string;
@@ -16,13 +17,16 @@ interface Garage {
   image_url?: string;
   average_rating: number;
   total_reviews: number;
+  min_price?: number;
 }
 const Services = () => {
   const navigate = useNavigate();
   const [garages, setGarages] = useState<Garage[]>([]);
+  const [filteredGarages, setFilteredGarages] = useState<Garage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceType, setServiceType] = useState<'all' | 'car' | 'bike'>('all');
   const [loading, setLoading] = useState(true);
+  const [appliedFilters, setAppliedFilters] = useState<any>(null);
   useEffect(() => {
     fetchGarages();
 
@@ -75,18 +79,36 @@ const Services = () => {
   const fetchGarages = async () => {
     try {
       console.log('Fetching garages...');
-      const {
-        data,
-        error
-      } = await supabase.from('garages').select('*').order('rating', {
-        ascending: false
-      });
-      if (error) {
-        console.error('Error fetching garages:', error);
-        throw error;
-      }
-      console.log('Fetched garages:', data?.length || 0);
-      setGarages(data || []);
+      
+      // Fetch garages with their minimum service prices
+      const { data: garagesData, error: garagesError } = await supabase
+        .from('garages')
+        .select('*')
+        .order('rating', { ascending: false });
+
+      if (garagesError) throw garagesError;
+
+      // Fetch minimum prices for each garage
+      const garagesWithPrices = await Promise.all(
+        (garagesData || []).map(async (garage) => {
+          const { data: services } = await supabase
+            .from('services')
+            .select('price')
+            .eq('garage_id', garage.id)
+            .not('price', 'is', null)
+            .order('price', { ascending: true })
+            .limit(1);
+
+          return {
+            ...garage,
+            min_price: services && services.length > 0 ? services[0].price : null
+          };
+        })
+      );
+
+      console.log('Fetched garages:', garagesWithPrices.length);
+      setGarages(garagesWithPrices);
+      setFilteredGarages(garagesWithPrices);
     } catch (error: any) {
       console.error('Failed to load garages:', error);
       toast({
@@ -98,19 +120,92 @@ const Services = () => {
       setLoading(false);
     }
   };
-  const filteredGarages = garages.filter(garage => {
-    const matchesSearch = garage.name.toLowerCase().includes(searchQuery.toLowerCase()) || garage.location.toLowerCase().includes(searchQuery.toLowerCase()) || garage.services?.some(service => service.toLowerCase().includes(searchQuery.toLowerCase()));
-    if (serviceType === 'all') return matchesSearch;
-    const serviceTypeMatch = garage.services?.some(service => {
-      if (serviceType === 'car') {
-        return service.toLowerCase().includes('car') || service.toLowerCase().includes('auto') || service.toLowerCase().includes('vehicle');
-      } else if (serviceType === 'bike') {
-        return service.toLowerCase().includes('bike') || service.toLowerCase().includes('motorcycle') || service.toLowerCase().includes('scooter');
-      }
-      return false;
+  // Apply search and filters
+  useEffect(() => {
+    let filtered = garages.filter(garage => {
+      const matchesSearch = garage.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          garage.location.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          garage.services?.some(service => service.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+      if (serviceType === 'all') return matchesSearch;
+      
+      const serviceTypeMatch = garage.services?.some(service => {
+        if (serviceType === 'car') {
+          return service.toLowerCase().includes('car') || service.toLowerCase().includes('auto') || service.toLowerCase().includes('vehicle');
+        } else if (serviceType === 'bike') {
+          return service.toLowerCase().includes('bike') || service.toLowerCase().includes('motorcycle') || service.toLowerCase().includes('scooter');
+        }
+        return false;
+      });
+      
+      return matchesSearch && serviceTypeMatch;
     });
-    return matchesSearch && serviceTypeMatch;
-  });
+
+    // Apply advanced filters if any
+    if (appliedFilters) {
+      filtered = filtered.filter(garage => {
+        // Price range filter
+        if (garage.min_price && (garage.min_price < appliedFilters.priceRange[0] || garage.min_price > appliedFilters.priceRange[1])) {
+          return false;
+        }
+        
+        // Rating filter
+        if (appliedFilters.rating > 0 && (garage.average_rating || garage.rating) < appliedFilters.rating) {
+          return false;
+        }
+        
+        // Services filter
+        if (appliedFilters.services.length > 0) {
+          const hasMatchingService = appliedFilters.services.some((filterService: string) =>
+            garage.services?.some(garageService => 
+              garageService.toLowerCase().includes(filterService.toLowerCase())
+            )
+          );
+          if (!hasMatchingService) return false;
+        }
+        
+        // Vehicle type filter
+        if (appliedFilters.vehicleType !== 'all') {
+          const hasVehicleType = garage.services?.some(service => {
+            const serviceLower = service.toLowerCase();
+            if (appliedFilters.vehicleType === 'car') {
+              return serviceLower.includes('car') || serviceLower.includes('auto') || serviceLower.includes('vehicle');
+            } else if (appliedFilters.vehicleType === 'bike') {
+              return serviceLower.includes('bike') || serviceLower.includes('motorcycle') || serviceLower.includes('scooter');
+            } else if (appliedFilters.vehicleType === 'truck') {
+              return serviceLower.includes('truck') || serviceLower.includes('heavy');
+            }
+            return false;
+          });
+          if (!hasVehicleType) return false;
+        }
+        
+        return true;
+      });
+
+      // Apply sorting
+      if (appliedFilters.sortBy === 'price_low') {
+        filtered.sort((a, b) => (a.min_price || 999999) - (b.min_price || 999999));
+      } else if (appliedFilters.sortBy === 'price_high') {
+        filtered.sort((a, b) => (b.min_price || 0) - (a.min_price || 0));
+      } else if (appliedFilters.sortBy === 'reviews') {
+        filtered.sort((a, b) => (b.total_reviews || 0) - (a.total_reviews || 0));
+      } else {
+        // Default: rating
+        filtered.sort((a, b) => (b.average_rating || b.rating || 0) - (a.average_rating || a.rating || 0));
+      }
+    }
+
+    setFilteredGarages(filtered);
+  }, [garages, searchQuery, serviceType, appliedFilters]);
+
+  const handleApplyFilters = (filters: any) => {
+    setAppliedFilters(filters);
+  };
+
+  const handleClearFilters = () => {
+    setAppliedFilters(null);
+  };
   if (loading) {
     return <div className="min-h-screen bg-gray-50 flex items-center justify-center pb-20 md:pb-0">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
@@ -160,10 +255,10 @@ const Services = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input type="text" placeholder="Search by garage name, location, or service..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-12 border-red-200 focus:border-red-500 focus:ring-red-500" />
             </div>
-            <Button variant="outline" size="lg" className="px-6 border-red-200 hover:bg-red-50">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
+            <FilterModal 
+              onApplyFilters={handleApplyFilters}
+              onClearFilters={handleClearFilters}
+            />
           </div>
         </div>
       </div>
@@ -238,7 +333,9 @@ const Services = () => {
                   <div className="flex items-center justify-between pt-2">
                     <div className="text-sm">
                       <span className="text-gray-600">Starting from </span>
-                      <span className="font-bold text-green-600 text-lg">₹299</span>
+                      <span className="font-bold text-green-600 text-lg">
+                        {garage.min_price ? `₹${garage.min_price}` : 'Contact for pricing'}
+                      </span>
                     </div>
                     <Button size="lg" onClick={() => navigate(`/book/${garage.id}`)} className="group-hover:shadow-lg transition-all duration-300 bg-red-600 hover:bg-red-700 px-8">
                       Book Now
@@ -257,6 +354,7 @@ const Services = () => {
             <Button variant="outline" className="mt-6" onClick={() => {
           setSearchQuery('');
           setServiceType('all');
+          handleClearFilters();
         }}>
               Clear Filters
             </Button>

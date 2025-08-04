@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 
 interface Garage {
@@ -260,37 +260,81 @@ const BookingPage = () => {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 pb-20">
       <PageHeader title="Book Service" showBackButton />
       
-      <div className="max-w-2xl mx-auto p-4 space-y-6">
-        {/* Garage Info */}
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <img 
-                src={garage.image_url || "/placeholder.svg"} 
-                alt={garage.name}
-                className="w-16 h-16 rounded-lg object-cover"
-              />
-              <div>
-                <h2 className="text-xl font-bold">{garage.name}</h2>
-                <p className="text-gray-600">{garage.location}</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  <span className="text-yellow-500">★</span>
-                  <span className="text-sm">{garage.rating || 0} ({garage.total_reviews || 0} reviews)</span>
+      <div className="max-w-4xl mx-auto p-4 space-y-8">
+        {/* Hero Section with Garage Info */}
+        <div className="relative">
+          <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-r from-red-600 via-red-700 to-red-800">
+            <CardContent className="p-0">
+              <div className="relative">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 bg-black/20"></div>
+                <div className="absolute inset-0 opacity-50" style={{
+                  backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"1\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
+                }}></div>
+                
+                <div className="relative p-8">
+                  <div className="flex items-start space-x-6">
+                    <div className="relative">
+                      <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white/20 shadow-2xl">
+                        <img 
+                          src={garage.image_url || "/placeholder.svg"} 
+                          alt={garage.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
+                        VERIFIED
+                      </div>
+                    </div>
+                    
+                    <div className="flex-1 text-white">
+                      <h1 className="text-3xl font-bold mb-2">{garage.name}</h1>
+                      <div className="flex items-center space-x-2 mb-3">
+                        <MapPin className="h-5 w-5 text-red-200" />
+                        <p className="text-red-100 text-lg">{garage.location}</p>
+                      </div>
+                      
+                      <div className="flex items-center space-x-6">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center bg-yellow-500 px-3 py-1 rounded-full">
+                            <Star className="h-4 w-4 text-white mr-1 fill-current" />
+                            <span className="text-white font-bold text-sm">{garage.rating || 0}</span>
+                          </div>
+                          <span className="text-red-100 text-sm">({garage.total_reviews || 0} reviews)</span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-4 text-red-100">
+                          <div className="flex items-center space-x-1">
+                            <Clock className="h-4 w-4" />
+                            <span className="text-sm">Quick Service</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Shield className="h-4 w-4" />
+                            <span className="text-sm">Trusted</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Booking Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Book Your Service</CardTitle>
+        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-red-50 border-b">
+            <CardTitle className="text-2xl text-gray-900 flex items-center">
+              <Calendar className="h-6 w-6 mr-3 text-red-600" />
+              Book Your Service
+            </CardTitle>
+            <p className="text-gray-600 mt-2">Select your preferred service and schedule</p>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Service Type Selection */}
               <div>
