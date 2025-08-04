@@ -204,10 +204,7 @@ const Services = () => {
               </Link>
             </Button>
             <div className="flex items-center space-x-4 flex-1">
-              <div className="relative">
-                
-                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-              </div>
+              
               <div className="flex-1">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">
                   Revonn
@@ -224,18 +221,10 @@ const Services = () => {
       </div>
 
       {/* Service Type Selection */}
-      <div className="bg-white/90 backdrop-blur-sm border-b border-red-100 mx-0 py-[14px]">
-        <div className="max-w-4xl sm:px-6 lg:px-8 mx-0 py-0 px-0">
-          <div className="text-center mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Choose Your Service Type</h3>
-            <p className="text-sm text-gray-600">Select the vehicle type for personalized recommendations</p>
-          </div>
-          
-        </div>
-      </div>
+      
 
       {/* Search and Filter */}
-      <div className="bg-white/90 backdrop-blur-sm border-b border-red-100 sticky top-16 z-30">
+      <div className="bg-white/90 backdrop-blur-sm border-b border-red-100 sticky top-16 z-30 py-0">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex space-x-3">
             <div className="relative flex-1">
@@ -248,7 +237,7 @@ const Services = () => {
       </div>
 
       {/* Available Garages */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-[17px]">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Available Service Centers</h2>
