@@ -15,7 +15,6 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from '@/hooks/use-toast';
 import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield, Award } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
-
 interface Garage {
   id: string;
   name: string;
@@ -24,7 +23,6 @@ interface Garage {
   rating: number;
   total_reviews: number;
 }
-
 interface Service {
   id: string;
   name: string;
@@ -33,12 +31,14 @@ interface Service {
   duration: number;
   category: string;
 }
-
 const BookingPage = () => {
-  const { garageId } = useParams();
+  const {
+    garageId
+  } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  
+  const {
+    user
+  } = useAuth();
   const [garage, setGarage] = useState<Garage | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -55,36 +55,35 @@ const BookingPage = () => {
   const [serviceType, setServiceType] = useState<'pickup' | 'home_service'>('pickup');
   const [serviceAddress, setServiceAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-
-  const { timeSlots, loading: timeSlotsLoading, formatTimeSlot } = useTimeSlots(garageId || '', bookingDate);
-  const { getAvailableMechanicForSlot } = useMechanicAvailability(garageId || '', bookingDate);
-
+  const {
+    timeSlots,
+    loading: timeSlotsLoading,
+    formatTimeSlot
+  } = useTimeSlots(garageId || '', bookingDate);
+  const {
+    getAvailableMechanicForSlot
+  } = useMechanicAvailability(garageId || '', bookingDate);
   useEffect(() => {
     if (garageId) {
       fetchGarageAndServices();
     }
   }, [garageId]);
-
   const fetchGarageAndServices = async () => {
     if (!garageId) return;
-
     try {
       // Fetch garage details
-      const { data: garageData, error: garageError } = await supabase
-        .from('garages')
-        .select('*')
-        .eq('id', garageId)
-        .single();
-
+      const {
+        data: garageData,
+        error: garageError
+      } = await supabase.from('garages').select('*').eq('id', garageId).single();
       if (garageError) throw garageError;
       setGarage(garageData);
 
       // Fetch services
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('garage_id', garageId);
-
+      const {
+        data: servicesData,
+        error: servicesError
+      } = await supabase.from('services').select('*').eq('garage_id', garageId);
       if (servicesError) throw servicesError;
       setServices(servicesData || []);
     } catch (error: any) {
@@ -92,19 +91,13 @@ const BookingPage = () => {
       toast({
         title: "Error",
         description: "Failed to load garage information",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const handleServiceToggle = (serviceId: string) => {
-    setSelectedServices(prev => 
-      prev.includes(serviceId)
-        ? prev.filter(id => id !== serviceId)
-        : [...prev, serviceId]
-    );
+    setSelectedServices(prev => prev.includes(serviceId) ? prev.filter(id => id !== serviceId) : [...prev, serviceId]);
   };
-
   const calculateTotal = () => {
     let baseTotal = selectedServices.reduce((total, serviceId) => {
       const service = services.find(s => s.id === serviceId);
@@ -115,54 +108,46 @@ const BookingPage = () => {
     if (serviceType === 'home_service') {
       baseTotal += 49; // ₹49 additional fee for home service
     }
-
     return baseTotal;
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
       toast({
         title: "Authentication Required",
         description: "Please sign in to make a booking",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     if (selectedServices.length === 0) {
       toast({
-        title: "No Services Selected", 
+        title: "No Services Selected",
         description: "Please select at least one service",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     if (!selectedTimeSlot) {
       toast({
         title: "No Time Selected",
         description: "Please select a time slot",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     if (!serviceAddress.trim()) {
       toast({
         title: "Address Required",
         description: `Please provide your address for ${serviceType === 'home_service' ? 'home service' : 'pickup service'}`,
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
-
     setIsLoading(true);
-
     try {
       // Get available mechanic for the selected time slot
       const availableMechanic = getAvailableMechanicForSlot(selectedTimeSlot);
-      
       console.log('Available mechanic for booking:', availableMechanic);
 
       // Get selected services with their names
@@ -178,11 +163,11 @@ const BookingPage = () => {
       // Create a single booking with all selected services
       const totalAmount = calculateTotal();
       const serviceNames = selectedServiceDetails.map(s => s.name).join(', ');
-      
       const bookingData: any = {
         user_id: user.id,
         garage_id: garageId!,
-        service_id: selectedServices[0], // Use first service as primary for backward compatibility
+        service_id: selectedServices[0],
+        // Use first service as primary for backward compatibility
         booking_date: bookingDate,
         booking_time: selectedTimeSlot,
         customer_name: customerName,
@@ -207,81 +192,54 @@ const BookingPage = () => {
       }
 
       // Insert the single booking
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert(bookingData)
-        .select()
-        .single();
-
+      const {
+        data: booking,
+        error: bookingError
+      } = await supabase.from('bookings').insert(bookingData).select().single();
       if (bookingError) throw bookingError;
 
       // Insert service associations into booking_services table
-      const bookingServicePromises = selectedServices.map(serviceId => 
-        supabase
-          .from('booking_services')
-          .insert({
-            booking_id: booking.id,
-            service_id: serviceId
-          })
-      );
-
+      const bookingServicePromises = selectedServices.map(serviceId => supabase.from('booking_services').insert({
+        booking_id: booking.id,
+        service_id: serviceId
+      }));
       await Promise.all(bookingServicePromises);
-
-      const mechanicMessage = availableMechanic 
-        ? `Assigned mechanic: ${availableMechanic.name}`
-        : 'Mechanic will be assigned by the garage owner';
-
+      const mechanicMessage = availableMechanic ? `Assigned mechanic: ${availableMechanic.name}` : 'Mechanic will be assigned by the garage owner';
       toast({
         title: "Booking Confirmed!",
-        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking for ${serviceNames} has been confirmed for ${bookingDate} at ${selectedTimeSlot}. ${mechanicMessage}`,
+        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking for ${serviceNames} has been confirmed for ${bookingDate} at ${selectedTimeSlot}. ${mechanicMessage}`
       });
-
       navigate('/profile');
     } catch (error: any) {
       console.error('Error creating booking:', error);
       toast({
         title: "Booking Failed",
         description: error.message || "Failed to create booking. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
   if (!garage) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
+    return <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
+      </div>;
   }
-
   const today = new Date().toISOString().split('T')[0];
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
+  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
       {/* Fixed Header */}
       <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center h-16">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate('/services')}
-              className="mr-3 hover:bg-red-50 transition-colors"
-            >
+            <Button variant="ghost" size="sm" onClick={() => navigate('/services')} className="mr-3 hover:bg-red-50 transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex items-center space-x-3 flex-1">
-              <img 
-                src="/lovable-uploads/aaae1da6-0e09-46c6-8523-ec04acbc268d.png" 
-                alt="Revonn Logo" 
-                className="h-10 w-10" 
-              />
+              
               <div className="flex-1">
                 <h1 className="text-xl font-bold text-red-600">Revonn</h1>
-                <p className="text-xs text-gray-500">Beyond Class</p>
+                
               </div>
               <div className="text-right">
                 <h2 className="text-lg font-semibold text-gray-900">Book Service</h2>
@@ -301,8 +259,8 @@ const BookingPage = () => {
                 {/* Enhanced Background Pattern */}
                 <div className="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
                 <div className="absolute inset-0 opacity-30" style={{
-                  backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"80\" height=\"80\" viewBox=\"0 0 80 80\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.15\"%3E%3Cpath d=\"M0 0h40v40H0V0zm40 40h40v40H40V40z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
-                }}></div>
+                backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"80\" height=\"80\" viewBox=\"0 0 80 80\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.15\"%3E%3Cpath d=\"M0 0h40v40H0V0zm40 40h40v40H40V40z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
+              }}></div>
                 
                 {/* Decorative elements */}
                 <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
@@ -312,11 +270,7 @@ const BookingPage = () => {
                   <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
                     <div className="relative group">
                       <div className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden border-4 border-white/30 shadow-2xl group-hover:shadow-3xl transition-all duration-300 bg-white/10 backdrop-blur-sm">
-                        <img 
-                          src={garage.image_url || "/placeholder.svg"} 
-                          alt={garage.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
+                        <img src={garage.image_url || "/placeholder.svg"} alt={garage.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       </div>
                       <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-400 to-green-600 text-white text-xs px-3 py-2 rounded-full font-bold shadow-xl transform rotate-12 hover:rotate-0 transition-transform duration-300">
                         ✓ VERIFIED
@@ -400,14 +354,10 @@ const BookingPage = () => {
               {/* Service Type Selection */}
               <div>
                 <Label className="text-base font-semibold">Service Type</Label>
-                <RadioGroup
-                  value={serviceType}
-                  onValueChange={(value: 'pickup' | 'home_service') => {
-                    console.log('Service type changed to:', value);
-                    setServiceType(value);
-                  }}
-                  className="mt-2"
-                >
+                <RadioGroup value={serviceType} onValueChange={(value: 'pickup' | 'home_service') => {
+                console.log('Service type changed to:', value);
+                setServiceType(value);
+              }} className="mt-2">
                   <div className="flex items-center space-x-2 p-3 border rounded-lg">
                     <RadioGroupItem value="pickup" id="pickup" />
                     <div className="flex items-center space-x-2">
@@ -437,14 +387,7 @@ const BookingPage = () => {
                   <MapPin className="w-4 h-4 inline mr-2" />
                   {serviceType === 'home_service' ? 'Home Address' : 'Pickup Address'}
                 </Label>
-                <Textarea
-                  id="address"
-                  value={serviceAddress}
-                  onChange={(e) => setServiceAddress(e.target.value)}
-                  placeholder={`Enter your ${serviceType === 'home_service' ? 'home' : 'pickup'} address...`}
-                  rows={3}
-                  required
-                />
+                <Textarea id="address" value={serviceAddress} onChange={e => setServiceAddress(e.target.value)} placeholder={`Enter your ${serviceType === 'home_service' ? 'home' : 'pickup'} address...`} rows={3} required />
                 <p className="text-xs text-gray-500 mt-1">
                   Please provide detailed address including landmarks for easy location
                 </p>
@@ -454,18 +397,10 @@ const BookingPage = () => {
               <div>
                 <Label className="text-base font-semibold">Select Services</Label>
                 <div className="mt-2 space-y-3">
-                  {services.map((service) => (
-                    <div key={service.id} className="flex items-center space-x-3 p-3 border rounded-lg">
-                      <Checkbox
-                        id={service.id}
-                        checked={selectedServices.includes(service.id)}
-                        onCheckedChange={() => handleServiceToggle(service.id)}
-                      />
+                  {services.map(service => <div key={service.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                      <Checkbox id={service.id} checked={selectedServices.includes(service.id)} onCheckedChange={() => handleServiceToggle(service.id)} />
                       <div className="flex-1">
-                        <label
-                          htmlFor={service.id}
-                          className="text-sm font-medium cursor-pointer"
-                        >
+                        <label htmlFor={service.id} className="text-sm font-medium cursor-pointer">
                           {service.name}
                         </label>
                         <p className="text-xs text-gray-500 mt-1">{service.description}</p>
@@ -478,8 +413,7 @@ const BookingPage = () => {
                           </span>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    </div>)}
                 </div>
               </div>
 
@@ -489,18 +423,11 @@ const BookingPage = () => {
                   <Calendar className="w-4 h-4 inline mr-2" />
                   Booking Date
                 </Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={bookingDate}
-                  onChange={(e) => {
-                    console.log('Date selected:', e.target.value);
-                    setBookingDate(e.target.value);
-                    setSelectedTimeSlot(''); // Reset time slot when date changes
-                  }}
-                  min={today}
-                  required
-                />
+                <Input id="date" type="date" value={bookingDate} onChange={e => {
+                console.log('Date selected:', e.target.value);
+                setBookingDate(e.target.value);
+                setSelectedTimeSlot(''); // Reset time slot when date changes
+              }} min={today} required />
               </div>
 
               {/* Time Slot Selection */}
@@ -509,32 +436,18 @@ const BookingPage = () => {
                   <Clock className="w-4 h-4 inline mr-2" />
                   Available Time Slots
                 </Label>
-                {bookingDate ? (
-                  <div className="mt-2">
-                    {timeSlotsLoading ? (
-                      <div className="text-center py-4">
+                {bookingDate ? <div className="mt-2">
+                    {timeSlotsLoading ? <div className="text-center py-4">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
                         <p className="text-sm text-gray-500 mt-2">Loading available time slots...</p>
-                      </div>
-                    ) : timeSlots.length > 0 ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        {timeSlots.map((slot) => (
-                          <Button
-                            key={slot.id}
-                            type="button"
-                            variant={selectedTimeSlot === slot.start_time ? "default" : "outline"}
-                            className="justify-start text-sm h-auto py-2 px-3"
-                            onClick={() => {
-                              console.log('Time slot selected:', slot.start_time);
-                              setSelectedTimeSlot(slot.start_time);
-                            }}
-                          >
+                      </div> : timeSlots.length > 0 ? <div className="grid grid-cols-2 gap-2">
+                        {timeSlots.map(slot => <Button key={slot.id} type="button" variant={selectedTimeSlot === slot.start_time ? "default" : "outline"} className="justify-start text-sm h-auto py-2 px-3" onClick={() => {
+                    console.log('Time slot selected:', slot.start_time);
+                    setSelectedTimeSlot(slot.start_time);
+                  }}>
                             {formatTimeSlot(slot.start_time, slot.end_time)}
-                          </Button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
+                          </Button>)}
+                      </div> : <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
                         <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                         <p className="text-gray-500 text-sm font-medium">
                           No available time slots for this date
@@ -542,17 +455,13 @@ const BookingPage = () => {
                         <p className="text-xs text-gray-400 mt-1">
                           Please try selecting a different date or contact the garage directly
                         </p>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 border border-gray-200 rounded-lg bg-gray-50">
+                      </div>}
+                  </div> : <div className="text-center py-4 border border-gray-200 rounded-lg bg-gray-50">
                     <Calendar className="w-6 h-6 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-500 text-sm">
                       Please select a date to see available time slots
                     </p>
-                  </div>
-                )}
+                  </div>}
               </div>
 
               {/* Customer Information */}
@@ -564,12 +473,7 @@ const BookingPage = () => {
                     <User className="w-4 h-4 inline mr-2" />
                     Full Name
                   </Label>
-                  <Input
-                    id="name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    required
-                  />
+                  <Input id="name" value={customerName} onChange={e => setCustomerName(e.target.value)} required />
                 </div>
 
                 <div>
@@ -577,13 +481,7 @@ const BookingPage = () => {
                     <Mail className="w-4 h-4 inline mr-2" />
                     Email
                   </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={customerEmail}
-                    onChange={(e) => setCustomerEmail(e.target.value)}
-                    required
-                  />
+                  <Input id="email" type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} required />
                 </div>
 
                 <div>
@@ -591,13 +489,7 @@ const BookingPage = () => {
                     <Phone className="w-4 h-4 inline mr-2" />
                     Phone Number
                   </Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    required
-                  />
+                  <Input id="phone" type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} required />
                 </div>
               </div>
 
@@ -625,24 +517,12 @@ const BookingPage = () => {
                     <Car className="w-4 h-4 inline mr-2" />
                     Vehicle Make
                   </Label>
-                  <Input
-                    id="make"
-                    value={vehicleMake}
-                    onChange={(e) => setVehicleMake(e.target.value)}
-                    placeholder="e.g., Toyota, Honda, BMW"
-                    required
-                  />
+                  <Input id="make" value={vehicleMake} onChange={e => setVehicleMake(e.target.value)} placeholder="e.g., Toyota, Honda, BMW" required />
                 </div>
 
                 <div>
                   <Label htmlFor="model">Vehicle Model</Label>
-                  <Input
-                    id="model"
-                    value={vehicleModel}
-                    onChange={(e) => setVehicleModel(e.target.value)}
-                    placeholder="e.g., Camry, Accord, X5"
-                    required
-                  />
+                  <Input id="model" value={vehicleModel} onChange={e => setVehicleModel(e.target.value)} placeholder="e.g., Camry, Accord, X5" required />
                 </div>
               </div>
 
@@ -652,13 +532,7 @@ const BookingPage = () => {
                   <FileText className="w-4 h-4 inline mr-2" />
                   Additional Notes (Optional)
                 </Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Any special instructions or concerns..."
-                  rows={3}
-                />
+                <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any special instructions or concerns..." rows={3} />
               </div>
 
               {/* Payment Method */}
@@ -677,24 +551,21 @@ const BookingPage = () => {
               </div>
 
               {/* Total */}
-              {selectedServices.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
+              {selectedServices.length > 0 && <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <span className="text-sm">Services Total:</span>
                       <span className="text-sm font-medium">
                         ₹{selectedServices.reduce((total, serviceId) => {
-                          const service = services.find(s => s.id === serviceId);
-                          return total + (service?.price || 0);
-                        }, 0)}
+                      const service = services.find(s => s.id === serviceId);
+                      return total + (service?.price || 0);
+                    }, 0)}
                       </span>
                     </div>
-                    {serviceType === 'home_service' && (
-                      <div className="flex justify-between items-center">
+                    {serviceType === 'home_service' && <div className="flex justify-between items-center">
                         <span className="text-sm">Home Service Fee:</span>
                         <span className="text-sm font-medium text-green-600">+₹49</span>
-                      </div>
-                    )}
+                      </div>}
                     <div className="flex justify-between items-center border-t pt-2">
                       <span className="text-lg font-semibold">Total Amount:</span>
                       <span className="text-xl font-bold text-green-600">
@@ -702,22 +573,15 @@ const BookingPage = () => {
                       </span>
                     </div>
                   </div>
-                </div>
-              )}
+                </div>}
 
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading || selectedServices.length === 0 || !selectedTimeSlot || !serviceAddress.trim()}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading || selectedServices.length === 0 || !selectedTimeSlot || !serviceAddress.trim()}>
                 {isLoading ? "Booking..." : `Confirm ${serviceType === 'home_service' ? 'Home Service' : 'Pickup'} Booking`}
               </Button>
             </form>
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default BookingPage;
