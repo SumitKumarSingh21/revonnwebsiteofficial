@@ -203,8 +203,11 @@ const Services = () => {
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
-            <div className="flex items-center space-x-4 flex-1 px-0 my-0 mx-0 py-0">
-              
+            <div className="flex items-center space-x-4 flex-1">
+              <div className="relative">
+                
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+              </div>
               <div className="flex-1">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">
                   Revonn
