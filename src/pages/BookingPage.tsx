@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield, Award } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 
 interface Garage {
@@ -260,61 +260,117 @@ const BookingPage = () => {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 pb-20">
-      <PageHeader title="Book Service" showBackButton />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50">
+      {/* Fixed Header */}
+      <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b sticky top-0 z-50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center h-16">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/services')}
+              className="mr-3 hover:bg-red-50 transition-colors"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center space-x-3 flex-1">
+              <img 
+                src="/lovable-uploads/aaae1da6-0e09-46c6-8523-ec04acbc268d.png" 
+                alt="Revonn Logo" 
+                className="h-10 w-10" 
+              />
+              <div className="flex-1">
+                <h1 className="text-xl font-bold text-red-600">Revonn</h1>
+                <p className="text-xs text-gray-500">Beyond Class</p>
+              </div>
+              <div className="text-right">
+                <h2 className="text-lg font-semibold text-gray-900">Book Service</h2>
+                <p className="text-xs text-gray-500">Schedule your appointment</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       
-      <div className="max-w-4xl mx-auto p-4 space-y-8">
-        {/* Hero Section with Garage Info */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        {/* Enhanced Hero Section with Garage Info */}
         <div className="relative">
-          <Card className="overflow-hidden border-0 shadow-xl bg-gradient-to-r from-red-600 via-red-700 to-red-800">
+          <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-red-600 via-red-700 to-rose-800 transform hover:scale-[1.02] transition-all duration-300">
             <CardContent className="p-0">
               <div className="relative">
-                {/* Background Pattern */}
-                <div className="absolute inset-0 bg-black/20"></div>
-                <div className="absolute inset-0 opacity-50" style={{
-                  backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"30\" cy=\"30\" r=\"1\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
+                {/* Enhanced Background Pattern */}
+                <div className="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
+                <div className="absolute inset-0 opacity-30" style={{
+                  backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"80\" height=\"80\" viewBox=\"0 0 80 80\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23ffffff\" fill-opacity=\"0.15\"%3E%3Cpath d=\"M0 0h40v40H0V0zm40 40h40v40H40V40z\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
                 }}></div>
                 
-                <div className="relative p-8">
-                  <div className="flex items-start space-x-6">
-                    <div className="relative">
-                      <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white/20 shadow-2xl">
+                {/* Decorative elements */}
+                <div className="absolute top-4 right-4 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
+                <div className="absolute bottom-4 left-4 w-16 h-16 bg-yellow-400/20 rounded-full blur-lg"></div>
+                
+                <div className="relative p-8 md:p-12">
+                  <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
+                    <div className="relative group">
+                      <div className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden border-4 border-white/30 shadow-2xl group-hover:shadow-3xl transition-all duration-300 bg-white/10 backdrop-blur-sm">
                         <img 
                           src={garage.image_url || "/placeholder.svg"} 
                           alt={garage.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                       </div>
-                      <div className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-lg">
-                        VERIFIED
+                      <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-400 to-green-600 text-white text-xs px-3 py-2 rounded-full font-bold shadow-xl transform rotate-12 hover:rotate-0 transition-transform duration-300">
+                        ✓ VERIFIED
+                      </div>
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-white/20 backdrop-blur-sm text-white text-xs px-3 py-1 rounded-full border border-white/30">
+                        Premium Partner
                       </div>
                     </div>
                     
-                    <div className="flex-1 text-white">
-                      <h1 className="text-3xl font-bold mb-2">{garage.name}</h1>
-                      <div className="flex items-center space-x-2 mb-3">
-                        <MapPin className="h-5 w-5 text-red-200" />
-                        <p className="text-red-100 text-lg">{garage.location}</p>
+                    <div className="flex-1 text-white space-y-4">
+                      <div>
+                        <h1 className="text-4xl md:text-5xl font-bold mb-2 bg-gradient-to-r from-white to-red-100 bg-clip-text text-transparent">
+                          {garage.name}
+                        </h1>
+                        <div className="flex items-center space-x-3 mb-4">
+                          <MapPin className="h-6 w-6 text-red-200" />
+                          <p className="text-red-100 text-xl font-medium">{garage.location}</p>
+                        </div>
                       </div>
                       
-                      <div className="flex items-center space-x-6">
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center bg-yellow-500 px-3 py-1 rounded-full">
-                            <Star className="h-4 w-4 text-white mr-1 fill-current" />
-                            <span className="text-white font-bold text-sm">{garage.rating || 0}</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/30">
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-yellow-500 p-2 rounded-xl shadow-lg">
+                              <Star className="h-5 w-5 text-white fill-current" />
+                            </div>
+                            <div>
+                              <div className="text-2xl font-bold">{garage.rating || 0}</div>
+                              <div className="text-red-100 text-sm">({garage.total_reviews || 0} reviews)</div>
+                            </div>
                           </div>
-                          <span className="text-red-100 text-sm">({garage.total_reviews || 0} reviews)</span>
                         </div>
                         
-                        <div className="flex items-center space-x-4 text-red-100">
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-4 w-4" />
-                            <span className="text-sm">Quick Service</span>
+                        <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-4 border border-white/30">
+                          <div className="flex items-center space-x-3">
+                            <div className="bg-blue-500 p-2 rounded-xl shadow-lg">
+                              <Clock className="h-5 w-5 text-white" />
+                            </div>
+                            <div>
+                              <div className="font-bold">Quick Service</div>
+                              <div className="text-red-100 text-sm">Professional Care</div>
+                            </div>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <Shield className="h-4 w-4" />
-                            <span className="text-sm">Trusted</span>
-                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-wrap gap-3 pt-2">
+                        <div className="bg-green-500/20 text-green-100 px-4 py-2 rounded-full text-sm font-medium border border-green-500/30">
+                          <Shield className="h-4 w-4 inline mr-1" />
+                          Trusted Partner
+                        </div>
+                        <div className="bg-purple-500/20 text-purple-100 px-4 py-2 rounded-full text-sm font-medium border border-purple-500/30">
+                          <Award className="h-4 w-4 inline mr-1" />
+                          Certified Mechanics
                         </div>
                       </div>
                     </div>
@@ -325,14 +381,19 @@ const BookingPage = () => {
           </Card>
         </div>
 
-        {/* Booking Form */}
-        <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-          <CardHeader className="bg-gradient-to-r from-gray-50 to-red-50 border-b">
-            <CardTitle className="text-2xl text-gray-900 flex items-center">
-              <Calendar className="h-6 w-6 mr-3 text-red-600" />
-              Book Your Service
-            </CardTitle>
-            <p className="text-gray-600 mt-2">Select your preferred service and schedule</p>
+        {/* Enhanced Booking Form */}
+        <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-md overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-slate-50 via-white to-red-50 border-b border-red-100 relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-blue-500/5"></div>
+            <div className="relative">
+              <CardTitle className="text-3xl text-gray-900 flex items-center font-bold">
+                <div className="bg-red-600 p-2 rounded-xl mr-4 shadow-lg">
+                  <Calendar className="h-7 w-7 text-white" />
+                </div>
+                Book Your Service
+              </CardTitle>
+              <p className="text-gray-600 mt-3 text-lg">Select your preferred service and schedule your appointment</p>
+            </div>
           </CardHeader>
           <CardContent className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">

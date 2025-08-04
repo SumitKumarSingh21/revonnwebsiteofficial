@@ -212,24 +212,33 @@ const Services = () => {
       </div>;
   }
   return <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 pb-20 md:pb-0">
-      {/* Fixed Header */}
-      <div className="bg-white/95 backdrop-blur-sm shadow-sm border-b sticky top-0 z-40">
+      {/* Enhanced Fixed Header */}
+      <div className="bg-white/98 backdrop-blur-md shadow-lg border-b border-red-100 sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center h-16">
-            <Button variant="ghost" size="sm" asChild className="mr-2 hover:bg-red-50">
+          <div className="flex items-center h-20">
+            <Button variant="ghost" size="sm" asChild className="mr-3 hover:bg-red-50 hover:scale-105 transition-all duration-200">
               <Link to="/">
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
-            <div className="flex items-center space-x-3 flex-1">
-              <img src="/lovable-uploads/aaae1da6-0e09-46c6-8523-ec04acbc268d.png" alt="Revonn Logo" className="h-10 w-10" />
-              <div className="flex-1">
-                <h1 className="text-xl font-bold text-red-600">Revonn</h1>
-                <p className="text-xs text-gray-500">Beyond Class</p>
+            <div className="flex items-center space-x-4 flex-1">
+              <div className="relative">
+                <img 
+                  src="/lovable-uploads/aaae1da6-0e09-46c6-8523-ec04acbc268d.png" 
+                  alt="Revonn Logo" 
+                  className="h-12 w-12 drop-shadow-lg" 
+                />
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
-              <div className="text-right">
-                <h2 className="text-lg font-semibold text-gray-900">Vehicle Services</h2>
-                <p className="text-xs text-gray-500">Find trusted garages</p>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">
+                  Revonn
+                </h1>
+                <p className="text-sm text-gray-600 font-medium">Beyond Class</p>
+              </div>
+              <div className="text-right bg-gradient-to-r from-red-50 to-blue-50 px-4 py-3 rounded-2xl border border-red-100">
+                <h2 className="text-xl font-bold text-gray-900">Vehicle Services</h2>
+                <p className="text-sm text-red-600 font-medium">Find trusted garages</p>
               </div>
             </div>
           </div>
@@ -276,18 +285,39 @@ const Services = () => {
           </div>
         </div>
 
-        {filteredGarages.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {filteredGarages.map(garage => <Card key={garage.id} className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group border-0 bg-white/80 backdrop-blur-sm">
+        {filteredGarages.length > 0 ? <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {filteredGarages.map(garage => <Card key={garage.id} className="overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group border-0 bg-white/90 backdrop-blur-md rounded-3xl">
                 <div className="relative">
                   <div className="aspect-[16/9] bg-gradient-to-br from-red-100 via-red-200 to-orange-200 flex items-center justify-center relative overflow-hidden">
-                    {garage.image_url ? <img src={garage.image_url} alt={garage.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" /> : <div className="text-6xl opacity-60">🏢</div>}
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full flex items-center shadow-lg">
-                      <Star className="h-4 w-4 text-yellow-500 mr-1 fill-current" />
-                      <span className="text-sm font-semibold">{garage.average_rating || garage.rating}</span>
+                    {garage.image_url ? (
+                      <img 
+                        src={garage.image_url} 
+                        alt={garage.name} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                      />
+                    ) : (
+                      <div className="text-6xl opacity-60 group-hover:scale-110 transition-transform duration-500">🏢</div>
+                    )}
+                    {/* Enhanced overlay gradients */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent group-hover:from-black/20 transition-all duration-300"></div>
+                    
+                    {/* Floating rating badge */}
+                    <div className="absolute top-4 right-4 bg-white/95 backdrop-blur-md px-4 py-2 rounded-2xl flex items-center shadow-2xl border border-white/50 group-hover:scale-110 transition-transform duration-300">
+                      <Star className="h-5 w-5 text-yellow-500 mr-2 fill-current drop-shadow-sm" />
+                      <span className="text-sm font-bold text-gray-900">{(garage.average_rating || garage.rating)?.toFixed(1)}</span>
                     </div>
-                    <div className="absolute bottom-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full">
-                      <span className="text-xs font-medium">VERIFIED</span>
+                    
+                    {/* Premium verified badge */}
+                    <div className="absolute bottom-4 left-4 bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-2xl shadow-2xl transform group-hover:scale-105 transition-all duration-300">
+                      <span className="text-sm font-bold flex items-center">
+                        <Shield className="h-4 w-4 mr-1" />
+                        VERIFIED
+                      </span>
                     </div>
+                    
+                    {/* Decorative elements */}
+                    <div className="absolute top-6 left-6 w-3 h-3 bg-white/30 rounded-full"></div>
+                    <div className="absolute top-10 left-8 w-2 h-2 bg-white/20 rounded-full"></div>
                   </div>
                 </div>
                 
