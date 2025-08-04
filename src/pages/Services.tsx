@@ -79,33 +79,28 @@ const Services = () => {
   const fetchGarages = async () => {
     try {
       console.log('Fetching garages...');
-      
-      // Fetch garages with their minimum service prices
-      const { data: garagesData, error: garagesError } = await supabase
-        .from('garages')
-        .select('*')
-        .order('rating', { ascending: false });
 
+      // Fetch garages with their minimum service prices
+      const {
+        data: garagesData,
+        error: garagesError
+      } = await supabase.from('garages').select('*').order('rating', {
+        ascending: false
+      });
       if (garagesError) throw garagesError;
 
       // Fetch minimum prices for each garage
-      const garagesWithPrices = await Promise.all(
-        (garagesData || []).map(async (garage) => {
-          const { data: services } = await supabase
-            .from('services')
-            .select('price')
-            .eq('garage_id', garage.id)
-            .not('price', 'is', null)
-            .order('price', { ascending: true })
-            .limit(1);
-
-          return {
-            ...garage,
-            min_price: services && services.length > 0 ? services[0].price : null
-          };
-        })
-      );
-
+      const garagesWithPrices = await Promise.all((garagesData || []).map(async garage => {
+        const {
+          data: services
+        } = await supabase.from('services').select('price').eq('garage_id', garage.id).not('price', 'is', null).order('price', {
+          ascending: true
+        }).limit(1);
+        return {
+          ...garage,
+          min_price: services && services.length > 0 ? services[0].price : null
+        };
+      }));
       console.log('Fetched garages:', garagesWithPrices.length);
       setGarages(garagesWithPrices);
       setFilteredGarages(garagesWithPrices);
@@ -123,12 +118,8 @@ const Services = () => {
   // Apply search and filters
   useEffect(() => {
     let filtered = garages.filter(garage => {
-      const matchesSearch = garage.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          garage.location.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          garage.services?.some(service => service.toLowerCase().includes(searchQuery.toLowerCase()));
-      
+      const matchesSearch = garage.name.toLowerCase().includes(searchQuery.toLowerCase()) || garage.location.toLowerCase().includes(searchQuery.toLowerCase()) || garage.services?.some(service => service.toLowerCase().includes(searchQuery.toLowerCase()));
       if (serviceType === 'all') return matchesSearch;
-      
       const serviceTypeMatch = garage.services?.some(service => {
         if (serviceType === 'car') {
           return service.toLowerCase().includes('car') || service.toLowerCase().includes('auto') || service.toLowerCase().includes('vehicle');
@@ -137,7 +128,6 @@ const Services = () => {
         }
         return false;
       });
-      
       return matchesSearch && serviceTypeMatch;
     });
 
@@ -148,22 +138,18 @@ const Services = () => {
         if (garage.min_price && (garage.min_price < appliedFilters.priceRange[0] || garage.min_price > appliedFilters.priceRange[1])) {
           return false;
         }
-        
+
         // Rating filter
         if (appliedFilters.rating > 0 && (garage.average_rating || garage.rating) < appliedFilters.rating) {
           return false;
         }
-        
+
         // Services filter
         if (appliedFilters.services.length > 0) {
-          const hasMatchingService = appliedFilters.services.some((filterService: string) =>
-            garage.services?.some(garageService => 
-              garageService.toLowerCase().includes(filterService.toLowerCase())
-            )
-          );
+          const hasMatchingService = appliedFilters.services.some((filterService: string) => garage.services?.some(garageService => garageService.toLowerCase().includes(filterService.toLowerCase())));
           if (!hasMatchingService) return false;
         }
-        
+
         // Vehicle type filter
         if (appliedFilters.vehicleType !== 'all') {
           const hasVehicleType = garage.services?.some(service => {
@@ -179,7 +165,6 @@ const Services = () => {
           });
           if (!hasVehicleType) return false;
         }
-        
         return true;
       });
 
@@ -195,14 +180,11 @@ const Services = () => {
         filtered.sort((a, b) => (b.average_rating || b.rating || 0) - (a.average_rating || a.rating || 0));
       }
     }
-
     setFilteredGarages(filtered);
   }, [garages, searchQuery, serviceType, appliedFilters]);
-
   const handleApplyFilters = (filters: any) => {
     setAppliedFilters(filters);
   };
-
   const handleClearFilters = () => {
     setAppliedFilters(null);
   };
@@ -223,22 +205,18 @@ const Services = () => {
             </Button>
             <div className="flex items-center space-x-4 flex-1">
               <div className="relative">
-                <img 
-                  src="/lovable-uploads/aaae1da6-0e09-46c6-8523-ec04acbc268d.png" 
-                  alt="Revonn Logo" 
-                  className="h-12 w-12 drop-shadow-lg" 
-                />
+                
                 <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
               <div className="flex-1">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-red-600 to-red-800 bg-clip-text text-transparent">
                   Revonn
                 </h1>
-                <p className="text-sm text-gray-600 font-medium">Beyond Class</p>
+                
               </div>
               <div className="text-right bg-gradient-to-r from-red-50 to-blue-50 px-4 py-3 rounded-2xl border border-red-100">
                 <h2 className="text-xl font-bold text-gray-900">Vehicle Services</h2>
-                <p className="text-sm text-red-600 font-medium">Find trusted garages</p>
+                
               </div>
             </div>
           </div>
@@ -247,7 +225,7 @@ const Services = () => {
 
       {/* Service Type Selection */}
       <div className="bg-white/90 backdrop-blur-sm border-b border-red-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-4xl sm:px-6 lg:px-8 mx-0 py-0 px-0">
           <div className="text-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Choose Your Service Type</h3>
             <p className="text-sm text-gray-600">Select the vehicle type for personalized recommendations</p>
@@ -264,10 +242,7 @@ const Services = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input type="text" placeholder="Search by garage name, location, or service..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-10 h-12 border-red-200 focus:border-red-500 focus:ring-red-500" />
             </div>
-            <FilterModal 
-              onApplyFilters={handleApplyFilters}
-              onClearFilters={handleClearFilters}
-            />
+            <FilterModal onApplyFilters={handleApplyFilters} onClearFilters={handleClearFilters} />
           </div>
         </div>
       </div>
@@ -289,15 +264,7 @@ const Services = () => {
             {filteredGarages.map(garage => <Card key={garage.id} className="overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group border-0 bg-white/90 backdrop-blur-md rounded-3xl">
                 <div className="relative">
                   <div className="aspect-[16/9] bg-gradient-to-br from-red-100 via-red-200 to-orange-200 flex items-center justify-center relative overflow-hidden">
-                    {garage.image_url ? (
-                      <img 
-                        src={garage.image_url} 
-                        alt={garage.name} 
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
-                      />
-                    ) : (
-                      <div className="text-6xl opacity-60 group-hover:scale-110 transition-transform duration-500">🏢</div>
-                    )}
+                    {garage.image_url ? <img src={garage.image_url} alt={garage.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="text-6xl opacity-60 group-hover:scale-110 transition-transform duration-500">🏢</div>}
                     {/* Enhanced overlay gradients */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent group-hover:from-black/20 transition-all duration-300"></div>
                     
