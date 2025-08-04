@@ -224,7 +224,7 @@ const Services = () => {
       </div>
 
       {/* Service Type Selection */}
-      <div className="bg-white/90 backdrop-blur-sm border-b border-red-100">
+      <div className="bg-white/90 backdrop-blur-sm border-b border-red-100 mx-0 py-[14px]">
         <div className="max-w-4xl sm:px-6 lg:px-8 mx-0 py-0 px-0">
           <div className="text-center mb-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Choose Your Service Type</h3>
