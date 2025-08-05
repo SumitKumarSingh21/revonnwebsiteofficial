@@ -476,32 +476,78 @@ const BookingPage = () => {
                   <Clock className="w-4 h-4 inline mr-2" />
                   Available Time Slots
                 </Label>
-                {bookingDate ? <div className="mt-2">
-                    {timeSlotsLoading ? <div className="text-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-                        <p className="text-sm text-gray-500 mt-2">Loading available time slots...</p>
-                      </div> : timeSlots.length > 0 ? <div className="grid grid-cols-2 gap-2">
-                        {timeSlots.map(slot => <Button key={slot.id} type="button" variant={selectedTimeSlot === slot.start_time ? "default" : "outline"} className="justify-start text-sm h-auto py-2 px-3" onClick={() => {
-                    console.log('Time slot selected:', slot.start_time);
-                    setSelectedTimeSlot(slot.start_time);
-                  }}>
-                            {formatTimeSlot(slot.start_time, slot.end_time)}
-                          </Button>)}
-                      </div> : <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
-                        <Clock className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-gray-500 text-sm font-medium">
+                {bookingDate ? (
+                  <div className="mt-3">
+                    {timeSlotsLoading ? (
+                      <div className="text-center py-6">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto"></div>
+                        <p className="text-sm text-gray-500 mt-3">Loading available time slots...</p>
+                      </div>
+                    ) : timeSlots.length > 0 ? (
+                      <div className="space-y-3">
+                        <p className="text-sm text-green-600 font-medium">
+                          ✓ {timeSlots.length} time slots available
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {timeSlots.map(slot => (
+                            <Button
+                              key={slot.id}
+                              type="button"
+                              variant={selectedTimeSlot === slot.start_time ? "default" : "outline"}
+                              className={`justify-center text-sm h-12 py-3 px-4 transition-all duration-200 font-medium ${
+                                selectedTimeSlot === slot.start_time 
+                                  ? "bg-red-600 hover:bg-red-700 text-white shadow-lg scale-105" 
+                                  : "hover:bg-red-50 hover:border-red-300 hover:text-red-700"
+                              }`}
+                              onClick={() => {
+                                console.log('Time slot selected:', slot.start_time);
+                                setSelectedTimeSlot(slot.start_time);
+                              }}
+                            >
+                              <Clock className="w-4 h-4 mr-2" />
+                              {formatTimeSlot(slot.start_time, slot.end_time)}
+                            </Button>
+                          ))}
+                        </div>
+                        {selectedTimeSlot && (
+                          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <p className="text-sm text-green-700 font-medium">
+                              ✓ Selected: {formatTimeSlot(selectedTimeSlot, timeSlots.find(s => s.start_time === selectedTimeSlot)?.end_time || '')}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+                        <Clock className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-600 text-base font-medium mb-2">
                           No available time slots for this date
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          Please try selecting a different date or contact the garage directly
+                        <p className="text-sm text-gray-500 mb-4">
+                          This might be because all slots are booked or it's a holiday.
                         </p>
-                      </div>}
-                  </div> : <div className="text-center py-4 border border-gray-200 rounded-lg bg-gray-50">
-                    <Calendar className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-500 text-sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setBookingDate('')}
+                          className="text-red-600 border-red-300 hover:bg-red-50"
+                        >
+                          Choose Different Date
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 border border-gray-200 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-50 mt-3">
+                    <Calendar className="w-10 h-10 text-blue-500 mx-auto mb-3" />
+                    <p className="text-gray-700 text-base font-medium">
                       Please select a date to see available time slots
                     </p>
-                  </div>}
+                    <p className="text-sm text-gray-500 mt-1">
+                      We'll show you all available appointment times
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Customer Information */}

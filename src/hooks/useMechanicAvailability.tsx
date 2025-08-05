@@ -76,10 +76,20 @@ export const useMechanicAvailability = (garageId: string, selectedDate: string) 
   }, [garageId, selectedDate]);
 
   const isTimeSlotAvailable = (timeSlot: string) => {
-    // If no mechanics are set up yet, don't allow booking (need at least one mechanic)
+    // Always log current state for debugging
+    console.log(`Checking availability for ${timeSlot}: ${mechanics.length} mechanics, ${existingBookings.length} bookings`);
+    
+    // If loading, show slots as available temporarily
+    if (loading) {
+      console.log('Still loading mechanic data, showing as available');
+      return true;
+    }
+
+    // If no mechanics are set up yet, allow booking but mechanic will be assigned manually
+    // Many garages might not have mechanics set up in the system initially
     if (mechanics.length === 0) {
-      console.log('No mechanics found, time slot not available:', timeSlot);
-      return false;
+      console.log('No mechanics configured, but allowing booking for manual assignment');
+      return true; // Changed from false to true - allow bookings even without configured mechanics
     }
 
     // Count how many mechanics are already booked for this time slot
@@ -95,9 +105,9 @@ export const useMechanicAvailability = (garageId: string, selectedDate: string) 
   };
 
   const getAvailableMechanicForSlot = (timeSlot: string) => {
-    // If no mechanics are available, return null (will be handled in booking)
+    // If no mechanics are configured, return null (booking will proceed with manual assignment)
     if (mechanics.length === 0) {
-      console.log('No mechanics available, booking will need manual assignment');
+      console.log('No mechanics configured, booking will need manual assignment by garage owner');
       return null;
     }
 
@@ -105,7 +115,10 @@ export const useMechanicAvailability = (garageId: string, selectedDate: string) 
       .filter(booking => booking.booking_time === timeSlot && booking.assigned_mechanic_id)
       .map(booking => booking.assigned_mechanic_id);
 
-    return mechanics.find(mechanic => !bookedMechanicIds.includes(mechanic.id));
+    const availableMechanic = mechanics.find(mechanic => !bookedMechanicIds.includes(mechanic.id));
+    console.log(`Available mechanic for ${timeSlot}:`, availableMechanic?.name || 'None available');
+    
+    return availableMechanic;
   };
 
   return {
