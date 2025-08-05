@@ -38,8 +38,8 @@ const ReviewModal = ({ booking, existingReview, onReviewSubmitted }: ReviewModal
   const [comment, setComment] = useState(existingReview?.comment || '');
   const [submitting, setSubmitting] = useState(false);
 
-  // Show review option for confirmed bookings
-  if (booking.status !== 'confirmed') {
+  // Show review option only for completed bookings
+  if (booking.status !== 'completed') {
     return null;
   }
 

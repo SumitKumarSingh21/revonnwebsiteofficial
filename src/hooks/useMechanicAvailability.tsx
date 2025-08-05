@@ -76,10 +76,10 @@ export const useMechanicAvailability = (garageId: string, selectedDate: string) 
   }, [garageId, selectedDate]);
 
   const isTimeSlotAvailable = (timeSlot: string) => {
-    // If no mechanics are set up yet, allow booking (garage owner can assign later)
+    // If no mechanics are set up yet, don't allow booking (need at least one mechanic)
     if (mechanics.length === 0) {
-      console.log('No mechanics found, allowing booking for time slot:', timeSlot);
-      return true;
+      console.log('No mechanics found, time slot not available:', timeSlot);
+      return false;
     }
 
     // Count how many mechanics are already booked for this time slot
@@ -87,7 +87,7 @@ export const useMechanicAvailability = (garageId: string, selectedDate: string) 
       booking => booking.booking_time === timeSlot && booking.assigned_mechanic_id
     ).length;
 
-    // Available if we have more mechanics than bookings
+    // Available if we have more mechanics than bookings (at least one free mechanic)
     const available = bookedMechanics < mechanics.length;
     console.log(`Time slot ${timeSlot}: ${bookedMechanics} booked, ${mechanics.length} total mechanics, available: ${available}`);
     

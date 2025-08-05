@@ -1043,7 +1043,7 @@ const Profile = () => {
                               <div className="font-bold text-lg">
                                 ₹{booking.total_amount}
                               </div>
-                              {booking.status === 'confirmed' && (
+                              {booking.status === 'completed' && (
                                 <ReviewModal
                                   booking={booking}
                                   existingReview={existingReview}
