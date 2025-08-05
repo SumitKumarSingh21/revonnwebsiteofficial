@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Car, Bike, CheckCircle, MapPin, Wrench, DollarSign, Star, ArrowRight, Download, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useLocation } from '@/hooks/useLocation';
 const Index = () => {
+  const { location, loading: locationLoading } = useLocation();
+  
   return <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
       {/* Navigation */}
       <nav className="bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-50">
@@ -19,6 +22,15 @@ const Index = () => {
               <Link to="/services" className="text-gray-700 hover:text-red-600 transition-colors">Services</Link>
               <Link to="/community" className="text-gray-700 hover:text-red-600 transition-colors">Community</Link>
               <Link to="/profile" className="text-gray-700 hover:text-red-600 transition-colors">Profile</Link>
+              
+              {/* Location Display */}
+              <div className="flex items-center space-x-1 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
+                <MapPin className="h-4 w-4 text-red-500" />
+                <span>
+                  {locationLoading ? 'Detecting...' : location?.city || 'Location not detected'}
+                </span>
+              </div>
+              
               <Button asChild variant="outline" className="mr-4">
                 <Link to="/auth?mode=login">Log In</Link>
               </Button>

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useTimeSlots } from '@/hooks/useTimeSlots';
 import { useMechanicAvailability } from '@/hooks/useMechanicAvailability';
+import { useLocation } from '@/hooks/useLocation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield, Award } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield, Award, Navigation } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 interface Garage {
   id: string;
@@ -63,11 +64,20 @@ const BookingPage = () => {
   const {
     getAvailableMechanicForSlot
   } = useMechanicAvailability(garageId || '', bookingDate);
+  const { location, loading: locationLoading, getCurrentLocation } = useLocation();
+  
   useEffect(() => {
     if (garageId) {
       fetchGarageAndServices();
     }
   }, [garageId]);
+
+  // Auto-fill address when location is detected and service address is empty
+  useEffect(() => {
+    if (location && !serviceAddress) {
+      setServiceAddress(location.address);
+    }
+  }, [location, serviceAddress]);
   const fetchGarageAndServices = async () => {
     if (!garageId) return;
     try {
@@ -383,13 +393,43 @@ const BookingPage = () => {
 
               {/* Service Address */}
               <div>
-                <Label htmlFor="address">
-                  <MapPin className="w-4 h-4 inline mr-2" />
-                  {serviceType === 'home_service' ? 'Home Address' : 'Pickup Address'}
-                </Label>
-                <Textarea id="address" value={serviceAddress} onChange={e => setServiceAddress(e.target.value)} placeholder={`Enter your ${serviceType === 'home_service' ? 'home' : 'pickup'} address...`} rows={3} required />
+                <div className="flex items-center justify-between mb-2">
+                  <Label htmlFor="address">
+                    <MapPin className="w-4 h-4 inline mr-2" />
+                    {serviceType === 'home_service' ? 'Home Address' : 'Pickup Address'}
+                  </Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const detectedLocation = await getCurrentLocation();
+                      if (detectedLocation) {
+                        setServiceAddress(detectedLocation.address);
+                      }
+                    }}
+                    disabled={locationLoading}
+                    className="text-xs"
+                  >
+                    <Navigation className="w-3 h-3 mr-1" />
+                    {locationLoading ? 'Detecting...' : 'Use Current Location'}
+                  </Button>
+                </div>
+                <Textarea 
+                  id="address" 
+                  value={serviceAddress} 
+                  onChange={e => setServiceAddress(e.target.value)} 
+                  placeholder={`Enter your ${serviceType === 'home_service' ? 'home' : 'pickup'} address...`} 
+                  rows={3} 
+                  required 
+                />
                 <p className="text-xs text-gray-500 mt-1">
                   Please provide detailed address including landmarks for easy location
+                  {location && (
+                    <span className="text-green-600 ml-2">
+                      ✓ Current location: {location.city}
+                    </span>
+                  )}
                 </p>
               </div>
 
