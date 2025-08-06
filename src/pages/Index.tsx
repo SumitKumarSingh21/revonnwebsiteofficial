@@ -1,181 +1,319 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Car, Bike, CheckCircle, MapPin, Wrench, DollarSign, Star, ArrowRight, Download, Users } from 'lucide-react';
+
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { Search, MapPin, Star, Clock, Shield, Users, Wrench, Navigation, ChevronRight } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
+import BottomNavigation from '@/components/BottomNavigation';
+
+interface Garage {
+  id: string;
+  name: string;
+  location: string;
+  image_url: string;
+  rating: number;
+  total_reviews: number;
+  services: string[];
+}
+
 const Index = () => {
-  const { location, loading: locationLoading } = useLocation();
-  
-  return <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-orange-50">
-      {/* Navigation */}
-      <nav className="bg-white/90 backdrop-blur-sm shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-8 w-8" />
+  const [garages, setGarages] = useState<Garage[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { location, loading: locationLoading, getCurrentLocation } = useLocation();
+
+  useEffect(() => {
+    fetchGarages();
+  }, []);
+
+  const fetchGarages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('garages')
+        .select('*')
+        .eq('status', 'active')
+        .order('rating', { ascending: false });
+
+      if (error) throw error;
+      setGarages(data || []);
+    } catch (error) {
+      console.error('Error fetching garages:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredGarages = garages.filter(garage =>
+    garage.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    garage.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    garage.services?.some(service => 
+      service.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  const featuredServices = [
+    { name: 'General Service', icon: '🔧', color: 'bg-blue-500' },
+    { name: 'Oil Change', icon: '🛢️', color: 'bg-green-500' },
+    { name: 'Brake Service', icon: '🛑', color: 'bg-red-500' },
+    { name: 'AC Repair', icon: '❄️', color: 'bg-cyan-500' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      {/* Enhanced Header */}
+      <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b sticky top-0 z-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-3">
+              <img 
+                src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" 
+                alt="Revonn Logo" 
+                className="h-8 w-8 sm:h-10 sm:w-10" 
+              />
               <div>
-                <span className="text-2xl font-bold text-red-600">Revonn</span>
-                <p className="text-xs text-gray-500">Beyond Class</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-red-600">Revonn</h1>
+                <p className="text-xs text-gray-500 hidden sm:block">Beyond Class</p>
               </div>
             </div>
-            <div className="hidden md:flex items-center space-x-8">
-              <Link to="/services" className="text-gray-700 hover:text-red-600 transition-colors">Services</Link>
-              <Link to="/community" className="text-gray-700 hover:text-red-600 transition-colors">Community</Link>
-              <Link to="/profile" className="text-gray-700 hover:text-red-600 transition-colors">Profile</Link>
-              
-              {/* Location Display */}
-              <div className="flex items-center space-x-1 text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
-                <MapPin className="h-4 w-4 text-red-500" />
-                <span>
-                  {locationLoading ? 'Detecting...' : location?.city || 'Location not detected'}
-                </span>
-              </div>
-              
-              <Button asChild variant="outline" className="mr-4">
-                <Link to="/auth?mode=login">Log In</Link>
-              </Button>
-              <Button asChild className="bg-red-600 hover:bg-red-700">
-                <Link to="/services">Book Now</Link>
-              </Button>
+            
+            {/* Location Display - Enhanced for Mobile */}
+            <div className="flex items-center space-x-2 text-right">
+              {locationLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent"></div>
+                  <span className="text-xs text-gray-500 hidden sm:inline">Detecting...</span>
+                </div>
+              ) : location ? (
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <MapPin className="h-4 w-4 text-red-600 flex-shrink-0" />
+                  <div className="text-right">
+                    <p className="text-sm sm:text-base font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[200px]">
+                      {location.city}
+                    </p>
+                    <p className="text-xs text-gray-500 hidden sm:block truncate max-w-[200px]">
+                      {location.address}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={getCurrentLocation}
+                  className="text-xs sm:text-sm border-red-300 text-red-600 hover:bg-red-50"
+                >
+                  <Navigation className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <span className="hidden sm:inline">Detect Location</span>
+                  <span className="sm:hidden">Location</span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
-      </nav>
+      </div>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-red-600 via-red-700 to-orange-600 text-white">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              Your Trusted Platform for Verified Car & Bike Services, 
-              <span className="text-orange-300"> Modifications & Support</span>
-            </h1>
-            <p className="text-xl md:text-2xl mb-8 text-red-100 max-w-3xl mx-auto">
-              Professional vehicle care at your doorstep with verified partners and transparent pricing
-            </p>
-            <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white px-8 py-4 text-lg" asChild>
-              <Link to="/services">
-                Book a Service <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* About Revonn Section */}
-      <section className="py-16 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8">About Revonn</h2>
-          <p className="text-lg text-gray-600 leading-relaxed">
-            Revonn is a growing vehicle service solution, bringing verified professionals to your doorstep. 
-            We aim to simplify car and bike maintenance, modifications, and emergency care through real-time bookings 
-            and trusted service providers — all under one platform.
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-24">
+        {/* Hero Section */}
+        <div className="text-center space-y-4 sm:space-y-6">
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
+            Find the Best <span className="text-red-600">Auto Services</span> Near You
+          </h2>
+          <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
+            Connect with trusted mechanics and garages in your area. Quality service, fair prices, guaranteed satisfaction.
           </p>
-        </div>
-      </section>
-
-      {/* Why Choose Revonn */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">Why Choose Revonn</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <CheckCircle className="h-12 w-12 text-green-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Verified Garages & Detailers</h3>
-              <p className="text-gray-600">All our partners are thoroughly vetted and certified professionals</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <DollarSign className="h-12 w-12 text-red-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Transparent Pricing</h3>
-              <p className="text-gray-600">No hidden charges, upfront pricing for all services</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <Car className="h-12 w-12 text-orange-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Car & Bike Services</h3>
-              <p className="text-gray-600">Complete vehicle care for both cars and motorcycles</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <Wrench className="h-12 w-12 text-purple-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Wide Range of Services</h3>
-              <p className="text-gray-600">From basic maintenance to custom modifications</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <MapPin className="h-12 w-12 text-red-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Available in Ranchi</h3>
-              <p className="text-gray-600">Expanding soon to more cities across India</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-              <Star className="h-12 w-12 text-yellow-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Quality Guaranteed</h3>
-              <p className="text-gray-600">100% satisfaction guarantee on all services</p>
+          
+          {/* Search Bar */}
+          <div className="max-w-2xl mx-auto relative">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+              <Input
+                type="text"
+                placeholder="Search for services, garages, or locations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12 pr-4 py-3 sm:py-4 text-base sm:text-lg rounded-2xl border-2 border-gray-200 focus:border-red-500 shadow-lg"
+              />
             </div>
           </div>
         </div>
-      </section>
 
-      {/* How it Works */}
-      <section className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">How it Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="bg-red-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-red-600">1</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Book a Service</h3>
-              <p className="text-gray-600">Choose your vehicle service and schedule via our app or website</p>
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
+          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full mb-3 sm:mb-4">
+              <Wrench className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
             </div>
-            <div className="text-center">
-              <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-orange-600">2</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Professional Service</h3>
-              <p className="text-gray-600">Verified partner visits you or you visit their garage</p>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">{garages.length}+</div>
+            <div className="text-xs sm:text-sm text-gray-600">Trusted Garages</div>
+          </div>
+          
+          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full mb-3 sm:mb-4">
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
             </div>
-            <div className="text-center">
-              <div className="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl font-bold text-green-600">3</span>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Payment & Feedback</h3>
-              <p className="text-gray-600">Secure payment and rate your experience</p>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">10K+</div>
+            <div className="text-xs sm:text-sm text-gray-600">Happy Customers</div>
+          </div>
+          
+          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-yellow-100 rounded-full mb-3 sm:mb-4">
+              <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 fill-current" />
             </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">4.8</div>
+            <div className="text-xs sm:text-sm text-gray-600">Average Rating</div>
+          </div>
+          
+          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
+            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full mb-3 sm:mb-4">
+              <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+            </div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900">100%</div>
+            <div className="text-xs sm:text-sm text-gray-600">Verified</div>
           </div>
         </div>
-      </section>
 
-      {/* Call to Action */}
-      <section className="py-16 bg-gradient-to-r from-red-600 to-orange-600 text-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold mb-6">Ready to Experience Revonn?</h2>
-          <p className="text-xl mb-8 text-red-100">
-            Join thousands of satisfied customers who trust Revonn for their vehicle care needs
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="bg-white text-red-600 hover:bg-gray-100 px-8 py-4">
-              <Download className="mr-2 h-5 w-5" />
-              Download the App
-            </Button>
-            <Button size="lg" variant="outline" className="border-white text-red-600 hover:bg-gray hover:text-red-600 px-8 py-4" asChild>
-              <Link to="/community">
-                <Users className="mr-2 h-5 w-5" />
-                Explore Community
-              </Link>
-            </Button>
+        {/* Featured Services */}
+        <div className="space-y-4 sm:space-y-6">
+          <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">Popular Services</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {featuredServices.map((service, index) => (
+              <Card key={index} className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-lg">
+                <CardContent className="p-4 sm:p-6 text-center">
+                  <div className={`w-12 h-12 sm:w-16 sm:h-16 ${service.color} rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 text-white text-xl sm:text-2xl`}>
+                    {service.icon}
+                  </div>
+                  <h4 className="font-semibold text-sm sm:text-base text-gray-900">{service.name}</h4>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
-      </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-6 w-6" />
-            <span className="text-xl font-bold">Revonn</span>
+        {/* Garages Section */}
+        <div className="space-y-4 sm:space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
+              {searchTerm ? 'Search Results' : 'Top Rated Garages'}
+            </h3>
+            {filteredGarages.length > 0 && (
+              <Button variant="outline" onClick={() => navigate('/services')} className="hidden sm:flex">
+                View All <ChevronRight className="ml-2 h-4 w-4" />
+              </Button>
+            )}
           </div>
-          <p className="text-gray-400">© 2025 Revonn. All rights reserved. | Your trusted vehicle service platform.</p>
+
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="overflow-hidden">
+                  <div className="animate-pulse">
+                    <div className="h-48 sm:h-56 bg-gray-200"></div>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                      <div className="h-3 bg-gray-200 rounded mb-4 w-3/4"></div>
+                      <div className="flex justify-between items-center">
+                        <div className="h-4 bg-gray-200 rounded w-20"></div>
+                        <div className="h-8 bg-gray-200 rounded w-16"></div>
+                      </div>
+                    </CardContent>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : filteredGarages.length === 0 ? (
+            <Card className="text-center py-12 sm:py-16">
+              <CardContent>
+                <Search className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
+                <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
+                  {searchTerm ? 'No garages found' : 'No garages available'}
+                </h4>
+                <p className="text-gray-600 mb-4">
+                  {searchTerm 
+                    ? `Try searching with different keywords or check your spelling.`
+                    : 'Check back later for available garages in your area.'
+                  }
+                </p>
+                {searchTerm && (
+                  <Button onClick={() => setSearchTerm('')} variant="outline">
+                    Clear Search
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {filteredGarages.slice(0, 6).map((garage) => (
+                <Card key={garage.id} className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg group">
+                  <div className="relative">
+                    <img 
+                      src={garage.image_url || "/placeholder.svg"} 
+                      alt={garage.name}
+                      className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                      <Badge className="bg-white/90 text-green-700 border-green-200 shadow-lg">
+                        <Star className="w-3 h-3 mr-1 fill-current" />
+                        {garage.rating || 0}
+                      </Badge>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+                  
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="space-y-3 sm:space-y-4">
+                      <div>
+                        <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 line-clamp-1">
+                          {garage.name}
+                        </h4>
+                        <div className="flex items-center text-gray-600 text-sm mb-2">
+                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                          <span className="line-clamp-1">{garage.location}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-1 text-sm text-gray-600">
+                          <Clock className="w-4 h-4" />
+                          <span>Quick Service</span>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {garage.total_reviews || 0} reviews
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        asChild 
+                        className="w-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                      >
+                        <Link to={`/booking/${garage.id}`}>
+                          Book Service
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+          
+          {filteredGarages.length > 6 && (
+            <div className="text-center pt-4">
+              <Button onClick={() => navigate('/services')} size="lg" className="bg-red-600 hover:bg-red-700">
+                View All Garages
+              </Button>
+            </div>
+          )}
         </div>
-      </footer>
-    </div>;
+      </div>
+
+      <BottomNavigation />
+    </div>
+  );
 };
+
 export default Index;
