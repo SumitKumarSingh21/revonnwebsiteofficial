@@ -82,17 +82,17 @@ const Index = () => {
             </div>
             
             {/* Location Display - Enhanced for Mobile */}
-            <div className="flex items-center space-x-2 text-right">
+            <div className="flex items-center space-x-2 text-right min-w-0">
               {locationLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent"></div>
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-red-600 border-t-transparent flex-shrink-0"></div>
                   <span className="text-xs text-gray-500 hidden sm:inline">Detecting...</span>
                 </div>
               ) : location ? (
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <MapPin className="h-4 w-4 text-red-600 flex-shrink-0" />
-                  <div className="text-right">
-                    <p className="text-sm sm:text-base font-semibold text-gray-900 truncate max-w-[120px] sm:max-w-[200px]">
+                <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
+                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-red-600 flex-shrink-0" />
+                  <div className="text-right min-w-0">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate max-w-[80px] sm:max-w-[200px]">
                       {location.city}
                     </p>
                     <p className="text-xs text-gray-500 hidden sm:block truncate max-w-[200px]">
@@ -105,7 +105,7 @@ const Index = () => {
                   variant="outline"
                   size="sm"
                   onClick={getCurrentLocation}
-                  className="text-xs sm:text-sm border-red-300 text-red-600 hover:bg-red-50"
+                  className="text-xs sm:text-sm border-red-300 text-red-600 hover:bg-red-50 px-2 sm:px-3"
                 >
                   <Navigation className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span className="hidden sm:inline">Detect Location</span>
@@ -194,13 +194,13 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Garages Section */}
+        {/* Garages Section - Limited to 6 garages */}
         <div className="space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
               {searchTerm ? 'Search Results' : 'Top Rated Garages'}
             </h3>
-            {filteredGarages.length > 0 && (
+            {filteredGarages.length > 0 && !searchTerm && (
               <Button variant="outline" onClick={() => navigate('/services')} className="hidden sm:flex">
                 View All <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
@@ -247,7 +247,8 @@ const Index = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {filteredGarages.slice(0, 6).map((garage) => (
+              {/* Show only 6 garages on homepage when not searching, all when searching */}
+              {(searchTerm ? filteredGarages : filteredGarages.slice(0, 6)).map((garage) => (
                 <Card key={garage.id} className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg group">
                   <div className="relative">
                     <img 
@@ -301,7 +302,8 @@ const Index = () => {
             </div>
           )}
           
-          {filteredGarages.length > 6 && (
+          {/* Show "View All" button only when not searching and there are more than 6 garages */}
+          {!searchTerm && filteredGarages.length > 6 && (
             <div className="text-center pt-4">
               <Button onClick={() => navigate('/services')} size="lg" className="bg-red-600 hover:bg-red-700">
                 View All Garages
