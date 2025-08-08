@@ -7,7 +7,7 @@ import BottomNavigation from '@/components/BottomNavigation';
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-muted/30">
       {/* Welcome Header */}
       <WelcomeHeader />
 
@@ -15,9 +15,6 @@ const Index = () => {
       <div className="pb-20">
         {/* Service Categories */}
         <ServiceCategories />
-        
-        {/* Promo Section */}
-        <PromoSection />
         
         {/* Quick Actions */}
         <QuickActions />
