@@ -63,6 +63,14 @@ const Index = () => {
     name: 'AC Repair',
     icon: '❄️',
     color: 'bg-cyan-500'
+  }, {
+    name: 'Air Filter Change',
+    icon: '💨',
+    color: 'bg-red-500'
+  }, {
+    name: 'Battery Issue',
+    icon: '🔋',
+    color: 'bg-red-500'
   }];
   return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Enhanced Header */}
