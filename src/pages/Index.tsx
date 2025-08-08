@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,8 @@ const Index = () => {
   const [garages, setGarages] = useState<Garage[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const {
     location,
@@ -36,12 +38,7 @@ const Index = () => {
 
   const fetchGarages = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('garages').select('*').eq('status', 'active').order('rating', {
-        ascending: false
-      });
+      const { data, error } = await supabase.from('garages').select('*').eq('status', 'active').order('rating', { ascending: false });
       if (error) throw error;
       setGarages(data || []);
     } catch (error) {
@@ -51,35 +48,46 @@ const Index = () => {
     }
   };
 
-  const filteredGarages = garages.filter(garage => garage.name.toLowerCase().includes(searchTerm.toLowerCase()) || garage.location.toLowerCase().includes(searchTerm.toLowerCase()) || garage.services.join(' ').toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredGarages = garages.filter(garage =>
+    garage.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    garage.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    garage.services.join(' ').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const featuredServices = [{
-    name: 'General Service',
-    icon: '🔧',
-    color: 'bg-blue-500'
-  }, {
-    name: 'Oil Change',
-    icon: '🛢️',
-    color: 'bg-green-500'
-  }, {
-    name: 'Brake Service',
-    icon: '🛑',
-    color: 'bg-red-500'
-  }, {
-    name: 'AC Repair',
-    icon: '❄️',
-    color: 'bg-cyan-500'
-  }, {
-    name: 'Air Filter Change',
-    icon: '💨',
-    color: 'bg-red-500'
-  }, {
-    name: 'Battery Issue',
-    icon: '🔋',
-    color: 'bg-red-500'
-  }];
+  const featuredServices = [
+    { name: 'General Service', icon: '🔧', color: 'bg-blue-500' },
+    { name: 'Oil Change', icon: '🛢️', color: 'bg-green-500' },
+    { name: 'Brake Service', icon: '🛑', color: 'bg-red-500' },
+    { name: 'AC Repair', icon: '❄️', color: 'bg-cyan-500' },
+    { name: 'Air Filter Change', icon: '💨', color: 'bg-red-500' },
+    { name: 'Battery Issue', icon: '🔋', color: 'bg-red-500' }
+  ];
 
-  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+  // For horizontal scroll section
+  const garagesToShow = searchTerm ? filteredGarages : filteredGarages.slice(0, 6);
+
+  // Handle scroll to update active dot
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const scrollLeft = scrollRef.current.scrollLeft;
+      const cardWidth = scrollRef.current.firstChild
+        ? (scrollRef.current.firstChild as HTMLElement).clientWidth + 16 // 16px is gap-4
+        : 1;
+      const idx = Math.round(scrollLeft / cardWidth);
+      setActiveIndex(idx);
+    }
+  };
+
+  // When search term changes, reset dot
+  useEffect(() => {
+    setActiveIndex(0);
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ left: 0, behavior: 'smooth' });
+    }
+  }, [searchTerm]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Enhanced Header */}
       <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -91,27 +99,28 @@ const Index = () => {
                 <p className="text-xs text-gray-500 hidden sm:block">Beyond Class</p>
               </div>
             </div>
-            
-            {/* Location Display - Enhanced for Mobile */}
+            {/* Location Display */}
             <div className="flex items-center space-x-2 text-right min-w-0">
-              {locationLoading ? <div className="flex items-center space-x-1 sm:space-x-2">
+              {locationLoading ? (
+                <div className="flex items-center space-x-1 sm:space-x-2">
                   <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-2 border-red-600 border-t-transparent flex-shrink-0"></div>
                   <span className="text-xs text-gray-500 hidden sm:inline">Detecting...</span>
-                </div> : location ? <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
+                </div>
+              ) : location ? (
+                <div className="flex items-center space-x-1 sm:space-x-2 min-w-0">
                   <MapPin className="h-3 w-3 sm:h-4 sm:w-4 text-red-600 flex-shrink-0" />
                   <div className="text-right min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate max-w-[80px] sm:max-w-[200px]">
-                      {location.city}
-                    </p>
-                    <p className="text-xs text-gray-500 hidden sm:block truncate max-w-[200px]">
-                      {location.address}
-                    </p>
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate max-w-[80px] sm:max-w-[200px]">{location.city}</p>
+                    <p className="text-xs text-gray-500 hidden sm:block truncate max-w-[200px]">{location.address}</p>
                   </div>
-                </div> : <Button variant="outline" size="sm" onClick={getCurrentLocation} className="text-xs sm:text-sm border-red-300 text-red-600 hover:bg-red-50 px-2 sm:px-3">
+                </div>
+              ) : (
+                <Button variant="outline" size="sm" onClick={getCurrentLocation} className="text-xs sm:text-sm border-red-300 text-red-600 hover:bg-red-50 px-2 sm:px-3">
                   <Navigation className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   <span className="hidden sm:inline">Detect Location</span>
                   <span className="sm:hidden">Location</span>
-                </Button>}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -126,9 +135,6 @@ const Index = () => {
           <p className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto">
             Connect with trusted mechanics and garages in your area. Quality service, fair prices, guaranteed satisfaction.
           </p>
-          
-          {/* Search Bar */}
-          
         </div>
 
         {/* Quick Stats */}
@@ -140,7 +146,6 @@ const Index = () => {
             <div className="text-xl sm:text-2xl font-bold text-gray-900">{garages.length}+</div>
             <div className="text-xs sm:text-sm text-gray-600">Trusted Garages</div>
           </div>
-          
           <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
             <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full mb-3 sm:mb-4">
               <Users className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
@@ -148,7 +153,6 @@ const Index = () => {
             <div className="text-xl sm:text-2xl font-bold text-gray-900">10K+</div>
             <div className="text-xs sm:text-sm text-gray-600">Happy Customers</div>
           </div>
-          
           <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
             <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-yellow-100 rounded-full mb-3 sm:mb-4">
               <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 fill-current" />
@@ -156,7 +160,6 @@ const Index = () => {
             <div className="text-xl sm:text-2xl font-bold text-gray-900">4.8</div>
             <div className="text-xs sm:text-sm text-gray-600">Average Rating</div>
           </div>
-          
           <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
             <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full mb-3 sm:mb-4">
               <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
@@ -170,26 +173,30 @@ const Index = () => {
         <div className="space-y-4 sm:space-y-6">
           <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">Popular Services</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {featuredServices.map((service, index) => <Card key={index} className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-lg">
+            {featuredServices.map((service, index) => (
+              <Card key={index} className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-lg">
                 <CardContent className="p-4 sm:p-6 text-center">
                   <div className={`w-12 h-12 sm:w-16 sm:h-16 ${service.color} rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 text-white text-xl sm:text-2xl`}>
                     {service.icon}
                   </div>
                   <h4 className="font-semibold text-sm sm:text-base text-gray-900">{service.name}</h4>
                 </CardContent>
-              </Card>)}
+              </Card>
+            ))}
           </div>
         </div>
 
-        {/* Garages Section - Limited to 6 garages */}
+        {/* Garages Section - Limited to 6 garages with horizontal scroll and dots */}
         <div className="space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
               {searchTerm ? 'Search Results' : 'Top Rated Garages'}
             </h3>
-            {filteredGarages.length > 0 && !searchTerm && <Button variant="outline" onClick={() => navigate('/services')} className="hidden sm:flex">
+            {filteredGarages.length > 0 && !searchTerm && (
+              <Button variant="outline" onClick={() => navigate('/services')} className="hidden sm:flex">
                 View All <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>}
+              </Button>
+            )}
           </div>
 
           {loading ? (
@@ -220,72 +227,91 @@ const Index = () => {
                 <p className="text-gray-600 mb-4">
                   {searchTerm ? `Try searching with different keywords or check your spelling.` : 'Check back later for available garages in your area.'}
                 </p>
-                {searchTerm && <Button onClick={() => setSearchTerm('')} variant="outline">
+                {searchTerm && (
+                  <Button onClick={() => setSearchTerm('')} variant="outline">
                     Clear Search
-                  </Button>}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
-            // --- CHANGED: horizontal scroll here ---
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {(searchTerm ? filteredGarages : filteredGarages.slice(0, 6)).map(garage => (
-                <Card key={garage.id} className="min-w-[18rem] max-w-xs flex-shrink-0 overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg group">
-                  <div className="relative">
-                    <img src={garage.image_url || "/placeholder.svg"} alt={garage.name} className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-300" />
-                    <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
-                      <Badge className="bg-white/90 text-green-700 border-green-200 shadow-lg">
-                        <Star className="w-3 h-3 mr-1 fill-current" />
-                        {garage.rating || 0}
-                      </Badge>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                  </div>
-                  
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="space-y-3 sm:space-y-4">
-                      <div>
-                        <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 line-clamp-1">
-                          {garage.name}
-                        </h4>
-                        <div className="flex items-center text-gray-600 text-sm mb-2">
-                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
-                          <span className="line-clamp-1">{garage.location}</span>
-                        </div>
+            // Horizontal scroll with dots
+            <>
+              <div
+                className="flex gap-4 overflow-x-auto pb-4 scroll-smooth"
+                ref={scrollRef}
+                onScroll={handleScroll}
+                style={{scrollSnapType: 'x mandatory'}}
+              >
+                {garagesToShow.map((garage) => (
+                  <Card
+                    key={garage.id}
+                    className="min-w-[18rem] max-w-xs flex-shrink-0 snap-start overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg group"
+                  >
+                    <div className="relative">
+                      <img src={garage.image_url || "/placeholder.svg"} alt={garage.name} className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                        <Badge className="bg-white/90 text-green-700 border-green-200 shadow-lg">
+                          <Star className="w-3 h-3 mr-1 fill-current" />
+                          {garage.rating || 0}
+                        </Badge>
                       </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1 text-sm text-gray-600">
-                          <Clock className="w-4 h-4" />
-                          <span>Quick Service</span>
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {garage.total_reviews || 0} reviews
-                        </div>
-                      </div>
-                      
-                      <Button asChild className="w-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
-                        <Link to={`/booking/${garage.id}`}>
-                          Book Service
-                        </Link>
-                      </Button>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                    <CardContent className="p-4 sm:p-6">
+                      <div className="space-y-3 sm:space-y-4">
+                        <div>
+                          <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 line-clamp-1">
+                            {garage.name}
+                          </h4>
+                          <div className="flex items-center text-gray-600 text-sm mb-2">
+                            <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                            <span className="line-clamp-1">{garage.location}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-1 text-sm text-gray-600">
+                            <Clock className="w-4 h-4" />
+                            <span>Quick Service</span>
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {garage.total_reviews || 0} reviews
+                          </div>
+                        </div>
+                        <Button asChild className="w-full bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl transition-all duration-200">
+                          <Link to={`/booking/${garage.id}`}>Book Service</Link>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              {/* Dot indicators */}
+              <div className="flex justify-center mt-2 space-x-2">
+                {garagesToShow.map((_, idx) => (
+                  <span
+                    key={idx}
+                    className={`h-2 w-2 rounded-full inline-block transition-all duration-300 
+                      ${activeIndex === idx ? "bg-red-600 scale-125" : "bg-gray-300"}
+                    `}
+                  />
+                ))}
+              </div>
+            </>
           )}
-          
           {/* Show "View All" button only when not searching and there are more than 6 garages */}
-          {!searchTerm && filteredGarages.length > 6 && <div className="text-center pt-4">
+          {!searchTerm && filteredGarages.length > 6 && (
+            <div className="text-center pt-4">
               <Button onClick={() => navigate('/services')} size="lg" className="bg-red-600 hover:bg-red-700">
                 View All Garages
               </Button>
-            </div>}
+            </div>
+          )}
         </div>
       </div>
-
       <BottomNavigation />
-    </div>;
+    </div>
+  );
 };
 
 export default Index;
