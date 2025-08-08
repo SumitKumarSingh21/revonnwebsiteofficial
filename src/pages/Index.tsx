@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Search, MapPin, Star, Clock, Shield, Users, Wrench, Navigation, ChevronRight } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
 import BottomNavigation from '@/components/BottomNavigation';
+
 interface Garage {
   id: string;
   name: string;
@@ -17,6 +18,7 @@ interface Garage {
   total_reviews: number;
   services: string[];
 }
+
 const Index = () => {
   const [garages, setGarages] = useState<Garage[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,9 +29,11 @@ const Index = () => {
     loading: locationLoading,
     getCurrentLocation
   } = useLocation();
+
   useEffect(() => {
     fetchGarages();
   }, []);
+
   const fetchGarages = async () => {
     try {
       const {
@@ -46,7 +50,9 @@ const Index = () => {
       setLoading(false);
     }
   };
-  const filteredGarages = garages.filter(garage => garage.name.toLowerCase().includes(searchTerm.toLowerCase()) || garage.location.toLowerCase().includes(searchTerm.toLowerCase()) || garage.services?.some(service => service.toLowerCase().includes(searchTerm.toLowerCase())));
+
+  const filteredGarages = garages.filter(garage => garage.name.toLowerCase().includes(searchTerm.toLowerCase()) || garage.location.toLowerCase().includes(searchTerm.toLowerCase()) || garage.services.join(' ').toLowerCase().includes(searchTerm.toLowerCase()));
+
   const featuredServices = [{
     name: 'General Service',
     icon: '🔧',
@@ -72,6 +78,7 @@ const Index = () => {
     icon: '🔋',
     color: 'bg-red-500'
   }];
+
   return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Enhanced Header */}
       <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b sticky top-0 z-50">
@@ -185,8 +192,10 @@ const Index = () => {
               </Button>}
           </div>
 
-          {loading ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {[...Array(6)].map((_, i) => <Card key={i} className="overflow-hidden">
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i} className="overflow-hidden">
                   <div className="animate-pulse">
                     <div className="h-48 sm:h-56 bg-gray-200"></div>
                     <CardContent className="p-4 sm:p-6">
@@ -198,8 +207,11 @@ const Index = () => {
                       </div>
                     </CardContent>
                   </div>
-                </Card>)}
-            </div> : filteredGarages.length === 0 ? <Card className="text-center py-12 sm:py-16">
+                </Card>
+              ))}
+            </div>
+          ) : filteredGarages.length === 0 ? (
+            <Card className="text-center py-12 sm:py-16">
               <CardContent>
                 <Search className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
                 <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
@@ -212,9 +224,12 @@ const Index = () => {
                     Clear Search
                   </Button>}
               </CardContent>
-            </Card> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Show only 6 garages on homepage when not searching, all when searching */}
-              {(searchTerm ? filteredGarages : filteredGarages.slice(0, 6)).map(garage => <Card key={garage.id} className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg group">
+            </Card>
+          ) : (
+            // --- CHANGED: horizontal scroll here ---
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {(searchTerm ? filteredGarages : filteredGarages.slice(0, 6)).map(garage => (
+                <Card key={garage.id} className="min-w-[18rem] max-w-xs flex-shrink-0 overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg group">
                   <div className="relative">
                     <img src={garage.image_url || "/placeholder.svg"} alt={garage.name} className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-300" />
                     <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
@@ -255,8 +270,10 @@ const Index = () => {
                       </Button>
                     </div>
                   </CardContent>
-                </Card>)}
-            </div>}
+                </Card>
+              ))}
+            </div>
+          )}
           
           {/* Show "View All" button only when not searching and there are more than 6 garages */}
           {!searchTerm && filteredGarages.length > 6 && <div className="text-center pt-4">
@@ -270,4 +287,5 @@ const Index = () => {
       <BottomNavigation />
     </div>;
 };
+
 export default Index;
