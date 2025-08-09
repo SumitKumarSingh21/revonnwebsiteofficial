@@ -63,6 +63,14 @@ const Index = () => {
     name: 'AC Repair',
     icon: '❄️',
     color: 'bg-cyan-500'
+  }, {
+    name: 'Air Filter Change',
+    icon: '💨',
+    color: 'bg-red-500'
+  }, {
+    name: 'Battery Issue',
+    icon: '🔋',
+    color: 'bg-red-500'
   }];
   return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       {/* Enhanced Header */}
@@ -117,39 +125,7 @@ const Index = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
-          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-blue-100 rounded-full mb-3 sm:mb-4">
-              <Wrench className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">{garages.length}+</div>
-            <div className="text-xs sm:text-sm text-gray-600">Trusted Garages</div>
-          </div>
-          
-          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-green-100 rounded-full mb-3 sm:mb-4">
-              <Users className="w-6 h-6 sm:w-8 sm:h-8 text-green-600" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">Vehicle Services</div>
-            <div className="text-xs sm:text-sm text-gray-600">Happy Customers</div>
-          </div>
-          
-          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-yellow-100 rounded-full mb-3 sm:mb-4">
-              <Star className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600 fill-current" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">4.8</div>
-            <div className="text-xs sm:text-sm text-gray-600">Average Rating</div>
-          </div>
-          
-          <div className="text-center p-4 sm:p-6 bg-white rounded-xl sm:rounded-2xl shadow-lg border border-gray-100">
-            <div className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 bg-purple-100 rounded-full mb-3 sm:mb-4">
-              <Shield className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-            </div>
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">100%</div>
-            <div className="text-xs sm:text-sm text-gray-600">Verified</div>
-          </div>
-        </div>
+        
 
         {/* Featured Services */}
         <div className="space-y-4 sm:space-y-6">
