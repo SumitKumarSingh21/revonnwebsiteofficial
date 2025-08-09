@@ -19,7 +19,7 @@ interface Garage {
 }
 const Index = () => {
   const [garages, setGarages] = useState<Garage[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const {
@@ -46,7 +46,6 @@ const Index = () => {
       setLoading(false);
     }
   };
-  const filteredGarages = garages.filter(garage => garage.name.toLowerCase().includes(searchTerm.toLowerCase()) || garage.location.toLowerCase().includes(searchTerm.toLowerCase()) || garage.services?.some(service => service.toLowerCase().includes(searchTerm.toLowerCase())));
   const featuredServices = [{
     name: 'General Service',
     icon: '🔧',
@@ -72,9 +71,9 @@ const Index = () => {
     icon: '🔋',
     color: 'bg-red-500'
   }];
-  return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+  return <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-100">
       {/* Enhanced Header */}
-      <div className="bg-white/95 backdrop-blur-sm shadow-lg border-b sticky top-0 z-50">
+      <div className="bg-white shadow-lg border-b border-red-100 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
@@ -131,61 +130,66 @@ const Index = () => {
         <div className="space-y-4 sm:space-y-6">
           <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">Popular Services</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {featuredServices.map((service, index) => <Card key={index} className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-lg">
+            {featuredServices.map((service, index) => (
+              <Card 
+                key={index} 
+                className="hover:shadow-xl transition-all duration-300 cursor-pointer border-0 shadow-lg hover:scale-105"
+                onClick={() => navigate('/services')}
+              >
                 <CardContent className="p-4 sm:p-6 text-center">
                   <div className={`w-12 h-12 sm:w-16 sm:h-16 ${service.color} rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 text-white text-xl sm:text-2xl`}>
                     {service.icon}
                   </div>
                   <h4 className="font-semibold text-sm sm:text-base text-gray-900">{service.name}</h4>
                 </CardContent>
-              </Card>)}
+              </Card>
+            ))}
           </div>
         </div>
 
-        {/* Garages Section - Limited to 6 garages */}
+        {/* Top Rated Garages Section - Horizontal scroll with 4 garages */}
         <div className="space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              {searchTerm ? 'Search Results' : 'Top Rated Garages'}
-            </h3>
-            {filteredGarages.length > 0 && !searchTerm && <Button variant="outline" onClick={() => navigate('/services')} className="hidden sm:flex">
-                View All <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>}
+            <h3 className="text-2xl sm:text-3xl font-bold text-gray-900">Top Rated Garages</h3>
+            <Button variant="outline" onClick={() => navigate('/services')} className="flex items-center text-red-600 border-red-200 hover:bg-red-50">
+              View All <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
           </div>
 
-          {loading ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {[...Array(6)].map((_, i) => <Card key={i} className="overflow-hidden">
+          {loading ? (
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {[...Array(4)].map((_, i) => (
+                <Card key={i} className="flex-shrink-0 w-72 overflow-hidden">
                   <div className="animate-pulse">
-                    <div className="h-48 sm:h-56 bg-gray-200"></div>
-                    <CardContent className="p-4 sm:p-6">
+                    <div className="h-40 bg-gray-200"></div>
+                    <CardContent className="p-4">
                       <div className="h-4 bg-gray-200 rounded mb-2"></div>
                       <div className="h-3 bg-gray-200 rounded mb-4 w-3/4"></div>
-                      <div className="flex justify-between items-center">
-                        <div className="h-4 bg-gray-200 rounded w-20"></div>
-                        <div className="h-8 bg-gray-200 rounded w-16"></div>
-                      </div>
+                      <div className="h-8 bg-gray-200 rounded"></div>
                     </CardContent>
                   </div>
-                </Card>)}
-            </div> : filteredGarages.length === 0 ? <Card className="text-center py-12 sm:py-16">
+                </Card>
+              ))}
+            </div>
+          ) : garages.length === 0 ? (
+            <Card className="text-center py-12 bg-red-50 border-red-100">
               <CardContent>
-                <Search className="h-12 w-12 sm:h-16 sm:w-16 text-gray-400 mx-auto mb-4" />
-                <h4 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
-                  {searchTerm ? 'No garages found' : 'No garages available'}
-                </h4>
-                <p className="text-gray-600 mb-4">
-                  {searchTerm ? `Try searching with different keywords or check your spelling.` : 'Check back later for available garages in your area.'}
-                </p>
-                {searchTerm && <Button onClick={() => setSearchTerm('')} variant="outline">
-                    Clear Search
-                  </Button>}
+                <Wrench className="h-12 w-12 text-red-400 mx-auto mb-4" />
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">No garages available</h4>
+                <p className="text-gray-600">Check back later for available garages in your area.</p>
               </CardContent>
-            </Card> : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {/* Show only 6 garages on homepage when not searching, all when searching */}
-              {(searchTerm ? filteredGarages : filteredGarages.slice(0, 6)).map(garage => <Card key={garage.id} className="overflow-hidden hover:shadow-2xl transition-all duration-300 border-0 shadow-lg group">
+            </Card>
+          ) : (
+            <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              {garages.slice(0, 4).map((garage) => (
+                <Card key={garage.id} className="flex-shrink-0 w-72 overflow-hidden hover:shadow-xl transition-all duration-300 border-0 shadow-lg group bg-white">
                   <div className="relative">
-                    <img src={garage.image_url || "/placeholder.svg"} alt={garage.name} className="w-full h-48 sm:h-56 object-cover group-hover:scale-105 transition-transform duration-300" />
-                    <div className="absolute top-3 sm:top-4 right-3 sm:right-4">
+                    <img 
+                      src={garage.image_url || "/placeholder.svg"} 
+                      alt={garage.name} 
+                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" 
+                    />
+                    <div className="absolute top-3 right-3">
                       <Badge className="bg-white/90 text-green-700 border-green-200 shadow-lg">
                         <Star className="w-3 h-3 mr-1 fill-current" />
                         {garage.rating || 0}
@@ -194,24 +198,24 @@ const Index = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
                   </div>
                   
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="space-y-3 sm:space-y-4">
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
                       <div>
-                        <h4 className="font-bold text-lg sm:text-xl text-gray-900 mb-1 line-clamp-1">
+                        <h4 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1">
                           {garage.name}
                         </h4>
                         <div className="flex items-center text-gray-600 text-sm mb-2">
-                          <MapPin className="w-3 h-3 sm:w-4 sm:h-4 mr-1 flex-shrink-0" />
+                          <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
                           <span className="line-clamp-1">{garage.location}</span>
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-1 text-sm text-gray-600">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center space-x-1 text-gray-600">
                           <Clock className="w-4 h-4" />
                           <span>Quick Service</span>
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-gray-500">
                           {garage.total_reviews || 0} reviews
                         </div>
                       </div>
@@ -223,15 +227,10 @@ const Index = () => {
                       </Button>
                     </div>
                   </CardContent>
-                </Card>)}
-            </div>}
-          
-          {/* Show "View All" button only when not searching and there are more than 6 garages */}
-          {!searchTerm && filteredGarages.length > 6 && <div className="text-center pt-4">
-              <Button onClick={() => navigate('/services')} size="lg" className="bg-red-600 hover:bg-red-700">
-                View All Garages
-              </Button>
-            </div>}
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
