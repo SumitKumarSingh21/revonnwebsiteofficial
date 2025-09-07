@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -299,6 +299,41 @@ export type Database = {
         }
         Relationships: []
       }
+      garage_push_tokens: {
+        Row: {
+          created_at: string
+          garage_id: string
+          id: string
+          platform: string
+          push_token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          garage_id: string
+          id?: string
+          platform: string
+          push_token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          garage_id?: string
+          id?: string
+          platform?: string
+          push_token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garage_push_tokens_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       garage_time_slots: {
         Row: {
           created_at: string
@@ -418,6 +453,7 @@ export type Database = {
           mechanic_id: string
           name: string
           phone: string | null
+          photo_url: string | null
           status: string | null
           updated_at: string
         }
@@ -429,6 +465,7 @@ export type Database = {
           mechanic_id: string
           name: string
           phone?: string | null
+          photo_url?: string | null
           status?: string | null
           updated_at?: string
         }
@@ -440,6 +477,7 @@ export type Database = {
           mechanic_id?: string
           name?: string
           phone?: string | null
+          photo_url?: string | null
           status?: string | null
           updated_at?: string
         }
@@ -557,6 +595,36 @@ export type Database = {
           user_id?: string
           user_image?: string | null
           username?: string
+        }
+        Relationships: []
+      }
+      predefined_services: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          duration: number
+          id: string
+          name: string
+          vehicle_type: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          duration: number
+          id?: string
+          name: string
+          vehicle_type: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          duration?: number
+          id?: string
+          name?: string
+          vehicle_type?: string
         }
         Relationships: []
       }
@@ -697,6 +765,7 @@ export type Database = {
           garage_id: string | null
           id: string
           name: string
+          predefined_service_id: string | null
           price: number | null
         }
         Insert: {
@@ -707,6 +776,7 @@ export type Database = {
           garage_id?: string | null
           id?: string
           name: string
+          predefined_service_id?: string | null
           price?: number | null
         }
         Update: {
@@ -717,6 +787,7 @@ export type Database = {
           garage_id?: string | null
           id?: string
           name?: string
+          predefined_service_id?: string | null
           price?: number | null
         }
         Relationships: [
@@ -727,6 +798,13 @@ export type Database = {
             referencedRelation: "garages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "services_predefined_service_id_fkey"
+            columns: ["predefined_service_id"]
+            isOneToOne: false
+            referencedRelation: "predefined_services"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -735,7 +813,7 @@ export type Database = {
     }
     Functions: {
       add_comment: {
-        Args: { p_post_id: string; p_user_id: string; p_content: string }
+        Args: { p_content: string; p_post_id: string; p_user_id: string }
         Returns: undefined
       }
       check_user_liked_post: {
@@ -746,6 +824,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_mechanic_verification_token: {
+        Args: { p_mechanic_id: number }
+        Returns: string
+      }
       generate_predefined_time_slots: {
         Args: { p_garage_id: string }
         Returns: undefined
@@ -753,11 +835,11 @@ export type Database = {
       get_post_comments: {
         Args: { p_post_id: string }
         Returns: {
-          id: string
           content: string
           created_at: string
-          user_id: string
+          id: string
           profiles: Json
+          user_id: string
         }[]
       }
       like_post: {
@@ -767,6 +849,14 @@ export type Database = {
       unlike_post: {
         Args: { p_post_id: string; p_user_id: string }
         Returns: undefined
+      }
+      verify_mechanic: {
+        Args: { p_mechanic_id: number; p_verification_token: string }
+        Returns: {
+          garage_name: string
+          is_verified: boolean
+          mechanic_name: string
+        }[]
       }
     }
     Enums: {
