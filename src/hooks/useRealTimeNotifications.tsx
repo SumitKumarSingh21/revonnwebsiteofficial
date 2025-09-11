@@ -79,6 +79,15 @@ export const useRealTimeNotifications = () => {
             title: newNotification.title,
             description: newNotification.message,
           });
+
+          // Send push notification
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(newNotification.title, {
+              body: newNotification.message,
+              icon: '/Revonn logo.ico',
+              badge: '/Revonn logo.ico'
+            });
+          }
         }
       )
       .on(

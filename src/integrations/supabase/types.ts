@@ -375,6 +375,11 @@ export type Database = {
       garages: {
         Row: {
           average_rating: number | null
+          bank_account_holder_name: string | null
+          bank_account_number: string | null
+          bank_details_verified: boolean | null
+          bank_ifsc_code: string | null
+          bank_upi_id: string | null
           created_at: string | null
           id: string
           image_url: string | null
@@ -391,6 +396,11 @@ export type Database = {
         }
         Insert: {
           average_rating?: number | null
+          bank_account_holder_name?: string | null
+          bank_account_number?: string | null
+          bank_details_verified?: boolean | null
+          bank_ifsc_code?: string | null
+          bank_upi_id?: string | null
           created_at?: string | null
           id?: string
           image_url?: string | null
@@ -407,6 +417,11 @@ export type Database = {
         }
         Update: {
           average_rating?: number | null
+          bank_account_holder_name?: string | null
+          bank_account_number?: string | null
+          bank_details_verified?: boolean | null
+          bank_ifsc_code?: string | null
+          bank_upi_id?: string | null
           created_at?: string | null
           id?: string
           image_url?: string | null
@@ -806,6 +821,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

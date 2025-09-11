@@ -115,18 +115,13 @@ export const usePushNotifications = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
-        .from('user_push_tokens')
-        .upsert({
-          user_id: user.id,
+      // Call our edge function to save the token
+      await supabase.functions.invoke('save-push-token', {
+        body: {
           token,
-          platform,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id,platform'
-        });
-
-      if (error) throw error;
+          platform
+        }
+      });
       console.log('Push token saved successfully');
     } catch (error) {
       console.error('Error saving push token:', error);

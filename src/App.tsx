@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import NotificationManager from "@/components/NotificationManager";
 import Index from "./pages/Index";
 import Services from "./pages/Services";
 import BookingPage from "./pages/BookingPage";
@@ -75,6 +76,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             <BottomNavigation />
+            <NotificationManager />
           </div>
         </AuthProvider>
       </BrowserRouter>
