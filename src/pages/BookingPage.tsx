@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield, Award, Navigation } from 'lucide-react';
+import { ArrowLeft, Calendar, Clock, User, Phone, Mail, Car, FileText, MapPin, Home, Star, Shield, Award, Navigation, MessageCircle } from 'lucide-react';
 import PageHeader from '@/components/PageHeader';
 interface Garage {
   id: string;
@@ -664,6 +664,23 @@ const BookingPage = () => {
               <Button type="submit" className="w-full" disabled={isLoading || selectedServices.length === 0 || !selectedTimeSlot || !serviceAddress.trim()}>
                 {isLoading ? "Booking..." : `Confirm ${serviceType === 'home_service' ? 'Home Service' : 'Pickup'} Booking`}
               </Button>
+
+              {/* Support Link */}
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-2">Need help with your booking?</p>
+                  <Button 
+                    type="button"
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/support/create-ticket?booking_id=${garageId}`)}
+                    className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Get Support
+                  </Button>
+                </div>
+              </div>
             </form>
           </CardContent>
         </Card>

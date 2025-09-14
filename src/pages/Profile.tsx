@@ -847,11 +847,18 @@ const Profile = () => {
                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
               {isOwnProfile && (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/settings">
-                    <Settings className="h-4 w-4" />
-                  </Link>
-                </Button>
+                <>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/support">
+                      <MessageCircle className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link to="/settings">
+                      <Settings className="h-4 w-4" />
+                    </Link>
+                  </Button>
+                </>
               )}
             </div>
           </div>

@@ -19,6 +19,12 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import BottomNavigation from "./components/BottomNavigation";
 
+// Support pages
+import Support from "./pages/Support";
+import SupportChat from "./pages/SupportChat";
+import CreateTicket from "./pages/CreateTicket";
+import CallRequest from "./pages/CallRequest";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -72,6 +78,17 @@ const App = () => (
                   <Revvy />
                 </ProtectedRoute>
               } />
+              
+              {/* Support routes */}
+              <Route path="/support" element={<Support />} />
+              <Route path="/support/chat" element={
+                <ProtectedRoute>
+                  <SupportChat />
+                </ProtectedRoute>
+              } />
+              <Route path="/support/create-ticket" element={<CreateTicket />} />
+              <Route path="/support/call-request" element={<CallRequest />} />
+              
               {/* Catch all route for 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
