@@ -110,19 +110,28 @@ const Index = () => {
       </header>
 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 pb-24">
-        {/* Hero Section */}
+        {/* Hero Section - SEO Optimized */}
         <section className="text-center space-y-4 sm:space-y-6">
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground">
-            Find the Best <span className="text-primary">Auto Services</span> Near You
+            India's #1 <span className="text-primary">Vehicle Service Platform</span> | Car & Bike Service Near Me
           </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Connect with trusted mechanics and garages in your area. Quality service, fair prices, guaranteed satisfaction.
+          <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto">
+            Book trusted doorstep car & bike services across India. Connect with verified mechanics and garages in your city. Professional vehicle repairs, modifications, and maintenance with transparent pricing. Best rates guaranteed!
           </p>
+          <div className="flex flex-wrap justify-center gap-2 text-sm text-muted-foreground">
+            <span className="bg-accent/50 px-3 py-1 rounded-full">Doorstep Service</span>
+            <span className="bg-accent/50 px-3 py-1 rounded-full">Verified Mechanics</span>
+            <span className="bg-accent/50 px-3 py-1 rounded-full">Transparent Pricing</span>
+            <span className="bg-accent/50 px-3 py-1 rounded-full">All India Service</span>
+          </div>
         </section>
 
-        {/* Featured Services */}
+        {/* Featured Services - SEO Enhanced */}
         <section className="space-y-4 sm:space-y-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Popular Auto Services</h2>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Popular Vehicle Services in India</h2>
+            <p className="text-muted-foreground">Professional car and bike services at your doorstep</p>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {featuredServices.map((service, index) => (
               <Card 
@@ -139,12 +148,31 @@ const Index = () => {
               </Card>
             ))}
           </div>
+          
+          {/* Additional Service Categories */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <div className="text-center p-6 bg-card rounded-lg border">
+              <h3 className="font-semibold text-lg mb-2 text-foreground">Car Services</h3>
+              <p className="text-sm text-muted-foreground">General servicing, oil change, brake repair, AC service, engine diagnostics, battery replacement</p>
+            </div>
+            <div className="text-center p-6 bg-card rounded-lg border">
+              <h3 className="font-semibold text-lg mb-2 text-foreground">Bike Services</h3>
+              <p className="text-sm text-muted-foreground">Two-wheeler maintenance, engine repair, brake service, chain lubrication, tire replacement</p>
+            </div>
+            <div className="text-center p-6 bg-card rounded-lg border">
+              <h3 className="font-semibold text-lg mb-2 text-foreground">Doorstep Service</h3>
+              <p className="text-sm text-muted-foreground">Professional mechanics at your home or office across major cities in India</p>
+            </div>
+          </div>
         </section>
 
         {/* Top Rated Garages Section - Horizontal scroll with 4 garages */}
         <section className="space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Top Rated Auto Garages</h2>
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Top Rated Auto Garages Near You</h2>
+              <p className="text-muted-foreground mt-1">Verified mechanics and service centers across India</p>
+            </div>
             <Button variant="outline" onClick={() => navigate('/services')} className="flex items-center text-primary border-border hover:bg-accent">
               View All <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
@@ -225,6 +253,48 @@ const Index = () => {
               ))}
             </div>
           )}
+        </section>
+
+        {/* FAQ Section for SEO */}
+        <section className="space-y-6 bg-card p-6 rounded-lg border">
+          <h2 className="text-2xl font-bold text-foreground text-center">Frequently Asked Questions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-semibold text-lg text-foreground mb-2">What services does Revonn offer?</h3>
+              <p className="text-muted-foreground text-sm">Revonn offers comprehensive vehicle services including car servicing, bike maintenance, doorstep repairs, engine diagnostics, brake service, AC repair, oil changes, and vehicle modifications across India.</p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg text-foreground mb-2">Is doorstep service available?</h3>
+              <p className="text-muted-foreground text-sm">Yes, we provide doorstep vehicle service where our verified mechanics come to your home or office for car and bike repairs, maintenance, and servicing.</p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg text-foreground mb-2">Which cities does Revonn serve?</h3>
+              <p className="text-muted-foreground text-sm">Revonn serves major cities across India including Delhi, Mumbai, Bangalore, Chennai, Hyderabad, Pune, Kolkata, Ahmedabad, Jaipur, Lucknow, Ranchi, Patna, and many more.</p>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg text-foreground mb-2">How do I book a service?</h3>
+              <p className="text-muted-foreground text-sm">You can book a service through our website or mobile app. Simply select your vehicle type, choose the service needed, and book an appointment with verified garages near you.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Cities We Serve - Local SEO */}
+        <section className="space-y-6">
+          <h2 className="text-2xl font-bold text-foreground text-center">Vehicle Services Across India</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 text-center">
+            {[
+              'Delhi', 'Mumbai', 'Bangalore', 'Chennai', 'Hyderabad', 'Pune', 
+              'Kolkata', 'Ahmedabad', 'Jaipur', 'Lucknow', 'Ranchi', 'Patna',
+              'Bhubaneswar', 'Guwahati', 'Indore', 'Nagpur', 'Kochi', 'Chandigarh'
+            ].map((city) => (
+              <div key={city} className="bg-accent/30 py-2 px-3 rounded-lg text-sm font-medium text-foreground hover:bg-accent/50 transition-colors cursor-pointer">
+                {city}
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-muted-foreground text-sm">
+            Professional car service, bike service, and doorstep vehicle repairs available in all major cities across India
+          </p>
         </section>
       </main>
 

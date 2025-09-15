@@ -1,3 +1,7 @@
+User-agent: *
+Allow: /
+
+# Allow specific search engine bots
 User-agent: Googlebot
 Allow: /
 
@@ -10,5 +14,21 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
-Allow: /
+# Allow crawling of important service pages
+Allow: /services
+Allow: /community
+Allow: /support
+Allow: /car-service*
+Allow: /bike-service*
+Allow: /doorstep-service*
+
+# Block access to admin/private areas (if any)
+Disallow: /admin/
+Disallow: /api/
+Disallow: /private/
+
+# Sitemap location
+Sitemap: https://www.revonn.com/sitemap.xml
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1
