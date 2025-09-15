@@ -1,30 +1,11 @@
-// Service Worker for Push Notifications
-
-const CACHE_NAME = 'revonn-v1';
-const urlsToCache = [
-  '/',
-  '/static/js/bundle.js',
-  '/static/css/main.css'
-];
+// Service Worker - lightweight, push-only. No navigation caching to avoid white-screen issues.
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
-  );
+  self.skipWaiting();
 });
 
-self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      }
-    )
-  );
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
 });
 
 // Push notification event handler
@@ -39,27 +20,21 @@ self.addEventListener('push', (event) => {
       primaryKey: '2'
     },
     actions: [
-      {
-        action: 'explore',
-        title: 'View',
-        icon: '/images/checkmark.png'
-      },
-      {
-        action: 'close',
-        title: 'Close',
-        icon: '/images/xmark.png'
-      }
+      { action: 'explore', title: 'View' },
+      { action: 'close', title: 'Close' }
     ]
   };
 
-  if (event.data) {
-    const data = event.data.json();
-    options.body = data.body || options.body;
-    options.title = data.title || 'Revonn Notification';
-    if (data.icon) options.icon = data.icon;
-    if (data.badge) options.badge = data.badge;
-    if (data.url) options.data.url = data.url;
-  }
+  try {
+    if (event.data) {
+      const data = event.data.json();
+      options.body = data.body || options.body;
+      options.title = data.title || 'Revonn Notification';
+      if (data.icon) options.icon = data.icon;
+      if (data.badge) options.badge = data.badge;
+      if (data.url) options.data.url = data.url;
+    }
+  } catch {}
 
   event.waitUntil(
     self.registration.showNotification(options.title || 'Revonn Notification', options)
@@ -69,19 +44,6 @@ self.addEventListener('push', (event) => {
 // Handle notification click
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
-  if (event.action === 'explore') {
-    // Open the app or navigate to specific page
-    event.waitUntil(
-      clients.openWindow(event.notification.data?.url || '/')
-    );
-  } else if (event.action === 'close') {
-    // Just close the notification
-    return;
-  } else {
-    // Default action - open the app
-    event.waitUntil(
-      clients.openWindow(event.notification.data?.url || '/')
-    );
-  }
+  const url = event.notification?.data?.url || '/';
+  event.waitUntil(self.clients.openWindow(url));
 });

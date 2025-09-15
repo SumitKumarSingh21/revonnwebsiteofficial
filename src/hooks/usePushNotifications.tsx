@@ -84,27 +84,37 @@ export const usePushNotifications = () => {
         return;
       }
 
-      // Register service worker
+      // Request permission for notifications first
+      const permissionResult = await Notification.requestPermission();
+      setPermission(permissionResult);
+
+      if (permissionResult !== 'granted') {
+        console.log('Notification permission not granted');
+        return;
+      }
+
+      // Only then register the Service Worker
       const registration = await navigator.serviceWorker.register('/sw.js');
-      console.log('Service Worker registered successfully:', registration);
+      console.log('Service Worker registered successfully:', {});
 
-      // Request permission for notifications
-      const permission = await Notification.requestPermission();
-      setPermission(permission);
+      // Validate VAPID key before subscribing (must be a base64-url string ~80-90 chars)
+      const VAPID_KEY = 'BKKhvQW4sUHyrbJZnPotdBjCr82GcDqeC7-7L9y0C7GM8CyYP6k3-g8LfOQGRGGFdP4z-uJ7JcY8rGONlHNNJzE';
+      const isLikelyValid = typeof VAPID_KEY === 'string' && VAPID_KEY.length > 80;
+      if (!isLikelyValid) {
+        console.warn('Skipping push subscription: missing/invalid VAPID key');
+        return;
+      }
 
-      if (permission === 'granted') {
-        // Get push subscription
+      try {
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(
-            // This is a placeholder VAPID public key - you need to generate your own
-            'BKKhvQW4sUHyrbJZnPotdBjCr82GcDqeC7-7L9y0C7GM8CyYP6k3-g8LfOQGRGGFdP4z-uJ7JcY8rGONlHNNJzE'
-          )
+          applicationServerKey: urlBase64ToUint8Array(VAPID_KEY)
         });
-
-        console.log('Push subscription:', subscription);
+        console.log('Push subscription created');
         await savePushToken(JSON.stringify(subscription), 'web');
         setIsRegistered(true);
+      } catch (subErr) {
+        console.error('Push subscription failed:', subErr);
       }
     } catch (error) {
       console.error('Error initializing web push notifications:', error);
