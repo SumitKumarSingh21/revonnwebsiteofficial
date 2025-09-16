@@ -53,6 +53,7 @@ const BookingPage = () => {
   const [vehicleType, setVehicleType] = useState('car');
   const [notes, setNotes] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const [serviceType, setServiceType] = useState<'pickup' | 'home_service'>('pickup');
   const [serviceAddress, setServiceAddress] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -154,6 +155,7 @@ const BookingPage = () => {
       });
       return;
     }
+    
     setIsLoading(true);
     try {
       // Get available mechanic for the selected time slot
@@ -173,6 +175,10 @@ const BookingPage = () => {
       // Create a single booking with all selected services
       const totalAmount = calculateTotal();
       const serviceNames = selectedServiceDetails.map(s => s.name).join(', ');
+      
+      // Set payment status based on payment method
+      const paymentStatus = paymentMethod === 'cash' ? 'cash_on_service' : 'pending';
+      
       const bookingData: any = {
         user_id: user.id,
         garage_id: garageId!,
@@ -188,6 +194,7 @@ const BookingPage = () => {
         vehicle_type: vehicleType,
         notes: `Services: ${serviceNames}\nService Type: ${serviceType === 'home_service' ? 'Home Service' : 'Pickup Service'}\nAddress: ${serviceAddress}${notes ? `\n\nAdditional Notes: ${notes}` : ''}`,
         payment_method: paymentMethod,
+        payment_status: paymentStatus,
         total_amount: totalAmount,
         status: 'confirmed',
         service_details: selectedServiceDetails,
@@ -214,12 +221,49 @@ const BookingPage = () => {
         service_id: serviceId
       }));
       await Promise.all(bookingServicePromises);
-      const mechanicMessage = availableMechanic ? `Assigned mechanic: ${availableMechanic.name}` : 'Mechanic will be assigned by the garage owner';
-      toast({
-        title: "Booking Confirmed!",
-        description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking for ${serviceNames} has been confirmed for ${bookingDate} at ${selectedTimeSlot}. ${mechanicMessage}`
-      });
-      navigate('/profile');
+
+      // Handle payment method
+      if (paymentMethod === 'cash') {
+        // Cash on Service - booking is confirmed immediately
+        const mechanicMessage = availableMechanic ? `Assigned mechanic: ${availableMechanic.name}` : 'Mechanic will be assigned by the garage owner';
+        toast({
+          title: "Booking Confirmed!",
+          description: `Your ${serviceType === 'home_service' ? 'home service' : 'pickup'} booking for ${serviceNames} has been confirmed for ${bookingDate} at ${selectedTimeSlot}. ${mechanicMessage}. Payment: Cash on Service.`
+        });
+        navigate('/profile');
+      } else {
+        // Online Payment - create payment link
+        setIsProcessingPayment(true);
+        
+        try {
+          const { data: paymentResponse, error: paymentError } = await supabase.functions.invoke('create-bulkpe-payment', {
+            body: {
+              bookingId: booking.id,
+              amount: totalAmount,
+              customerName: customerName,
+              customerEmail: customerEmail,
+              customerPhone: customerPhone
+            }
+          });
+
+          if (paymentError || !paymentResponse.success) {
+            throw new Error(paymentResponse?.error || 'Failed to create payment');
+          }
+
+          // Redirect to payment URL
+          window.location.href = paymentResponse.paymentUrl;
+          
+        } catch (paymentError: any) {
+          console.error('Payment creation failed:', paymentError);
+          toast({
+            title: "Payment Failed",
+            description: "Failed to create payment link. Please try again or choose Cash on Service.",
+            variant: "destructive"
+          });
+          setIsProcessingPayment(false);
+        }
+      }
+      
     } catch (error: any) {
       console.error('Error creating booking:', error);
       toast({
@@ -227,7 +271,6 @@ const BookingPage = () => {
         description: error.message || "Failed to create booking. Please try again.",
         variant: "destructive"
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -621,19 +664,46 @@ const BookingPage = () => {
                 <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Any special instructions or concerns..." rows={3} />
               </div>
 
-              {/* Payment Method */}
-              <div>
-                <Label htmlFor="payment">Payment Method</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Credit/Debit Card</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Payment Options */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold">Payment Method</Label>
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="grid grid-cols-1 gap-4">
+                  <div className="flex items-center space-x-3 p-4 border-2 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="cash" id="cash" />
+                    <div className="flex-1">
+                      <label htmlFor="cash" className="text-sm font-medium cursor-pointer flex items-center">
+                        <div className="bg-green-100 p-2 rounded-lg mr-3">
+                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="font-semibold">Cash on Service</div>
+                          <div className="text-xs text-gray-500">Pay directly to the garage at service time</div>
+                        </div>
+                      </label>
+                    </div>
+                    <div className="text-green-600 font-medium text-sm">No extra charges</div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-3 p-4 border-2 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer">
+                    <RadioGroupItem value="online" id="online" />
+                    <div className="flex-1">
+                      <label htmlFor="online" className="text-sm font-medium cursor-pointer flex items-center">
+                        <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div className="font-semibold">UPI/Online Payment</div>
+                          <div className="text-xs text-gray-500">Pay now via UPI, Cards, Net Banking (Powered by Bulkpe)</div>
+                        </div>
+                      </label>
+                    </div>
+                    <div className="text-blue-600 font-medium text-sm">Secure & Instant</div>
+                  </div>
+                </RadioGroup>
               </div>
 
               {/* Total */}
@@ -661,9 +731,28 @@ const BookingPage = () => {
                   </div>
                 </div>}
 
-              <Button type="submit" className="w-full" disabled={isLoading || selectedServices.length === 0 || !selectedTimeSlot || !serviceAddress.trim()}>
-                {isLoading ? "Booking..." : `Confirm ${serviceType === 'home_service' ? 'Home Service' : 'Pickup'} Booking`}
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || isProcessingPayment || selectedServices.length === 0 || !selectedTimeSlot || !serviceAddress.trim()}
+              >
+                {isProcessingPayment 
+                  ? "Redirecting to Payment..." 
+                  : isLoading 
+                    ? "Booking..." 
+                    : paymentMethod === 'cash'
+                      ? `Confirm ${serviceType === 'home_service' ? 'Home Service' : 'Pickup'} Booking`
+                      : `Pay ₹${calculateTotal()} & Confirm Booking`
+                }
               </Button>
+              
+              {paymentMethod === 'online' && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700 text-center">
+                    🔒 You'll be redirected to a secure payment page powered by Bulkpe
+                  </p>
+                </div>
+              )}
 
               {/* Support Link */}
               <div className="mt-4 pt-4 border-t border-gray-200">

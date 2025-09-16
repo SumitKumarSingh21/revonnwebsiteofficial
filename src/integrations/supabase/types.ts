@@ -53,6 +53,72 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_verification: {
+        Row: {
+          account_holder_name: string
+          account_number: string
+          account_type: string
+          bank_name: string
+          bank_proof_url: string | null
+          created_at: string | null
+          garage_id: string
+          id: string
+          ifsc_code: string
+          rejection_reason: string | null
+          status: Database["public"]["Enums"]["bank_verification_status"] | null
+          updated_at: string | null
+          upi_id: string | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          account_holder_name: string
+          account_number: string
+          account_type: string
+          bank_name: string
+          bank_proof_url?: string | null
+          created_at?: string | null
+          garage_id: string
+          id?: string
+          ifsc_code: string
+          rejection_reason?: string | null
+          status?:
+            | Database["public"]["Enums"]["bank_verification_status"]
+            | null
+          updated_at?: string | null
+          upi_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          account_holder_name?: string
+          account_number?: string
+          account_type?: string
+          bank_name?: string
+          bank_proof_url?: string | null
+          created_at?: string | null
+          garage_id?: string
+          id?: string
+          ifsc_code?: string
+          rejection_reason?: string | null
+          status?:
+            | Database["public"]["Enums"]["bank_verification_status"]
+            | null
+          updated_at?: string | null
+          upi_id?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_verification_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: true
+            referencedRelation: "garages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_services: {
         Row: {
           booking_id: string
@@ -104,7 +170,10 @@ export type Database = {
           garage_id: string
           id: string
           notes: string | null
+          payment_gateway_response: Json | null
           payment_method: string | null
+          payment_reference: string | null
+          payment_status: string | null
           service_details: Json | null
           service_id: string
           service_names: string | null
@@ -129,7 +198,10 @@ export type Database = {
           garage_id: string
           id?: string
           notes?: string | null
+          payment_gateway_response?: Json | null
           payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
           service_details?: Json | null
           service_id: string
           service_names?: string | null
@@ -154,7 +226,10 @@ export type Database = {
           garage_id?: string
           id?: string
           notes?: string | null
+          payment_gateway_response?: Json | null
           payment_method?: string | null
+          payment_reference?: string | null
+          payment_status?: string | null
           service_details?: Json | null
           service_id?: string
           service_names?: string | null
@@ -391,6 +466,62 @@ export type Database = {
         }
         Relationships: []
       }
+      garage_documents: {
+        Row: {
+          created_at: string | null
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_size: number | null
+          file_url: string
+          garage_id: string
+          id: string
+          rejection_reason: string | null
+          updated_at: string | null
+          uploaded_at: string | null
+          verified: boolean | null
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          document_type: Database["public"]["Enums"]["document_type"]
+          file_name: string
+          file_size?: number | null
+          file_url: string
+          garage_id: string
+          id?: string
+          rejection_reason?: string | null
+          updated_at?: string | null
+          uploaded_at?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          document_type?: Database["public"]["Enums"]["document_type"]
+          file_name?: string
+          file_size?: number | null
+          file_url?: string
+          garage_id?: string
+          id?: string
+          rejection_reason?: string | null
+          updated_at?: string | null
+          uploaded_at?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garage_documents_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       garage_push_tokens: {
         Row: {
           created_at: string
@@ -472,7 +603,9 @@ export type Database = {
           bank_details_verified: boolean | null
           bank_ifsc_code: string | null
           bank_upi_id: string | null
+          bank_verified_at: string | null
           created_at: string | null
+          documents_uploaded_at: string | null
           id: string
           image_url: string | null
           location: string | null
@@ -484,6 +617,10 @@ export type Database = {
           status: string | null
           total_reviews: number | null
           updated_at: string | null
+          verification_badge_color: string | null
+          verification_status:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
           working_hours: Json | null
         }
         Insert: {
@@ -493,7 +630,9 @@ export type Database = {
           bank_details_verified?: boolean | null
           bank_ifsc_code?: string | null
           bank_upi_id?: string | null
+          bank_verified_at?: string | null
           created_at?: string | null
+          documents_uploaded_at?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
@@ -505,6 +644,10 @@ export type Database = {
           status?: string | null
           total_reviews?: number | null
           updated_at?: string | null
+          verification_badge_color?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
           working_hours?: Json | null
         }
         Update: {
@@ -514,7 +657,9 @@ export type Database = {
           bank_details_verified?: boolean | null
           bank_ifsc_code?: string | null
           bank_upi_id?: string | null
+          bank_verified_at?: string | null
           created_at?: string | null
+          documents_uploaded_at?: string | null
           id?: string
           image_url?: string | null
           location?: string | null
@@ -526,6 +671,10 @@ export type Database = {
           status?: string | null
           total_reviews?: number | null
           updated_at?: string | null
+          verification_badge_color?: string | null
+          verification_status?:
+            | Database["public"]["Enums"]["verification_status"]
+            | null
           working_hours?: Json | null
         }
         Relationships: []
@@ -798,6 +947,36 @@ export type Database = {
           phone?: string | null
           updated_at?: string | null
           username?: string | null
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          created_at: string
+          endpoint: string
+          id: number
+          keys: Json | null
+          raw: Json | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          id?: never
+          keys?: Json | null
+          raw?: Json | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          id?: never
+          keys?: Json | null
+          raw?: Json | null
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1080,6 +1259,53 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_audit_log: {
+        Row: {
+          action: string
+          admin_id: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          garage_id: string
+          id: string
+          new_status: string | null
+          old_status: string | null
+          reason: string | null
+        }
+        Insert: {
+          action: string
+          admin_id: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          garage_id: string
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          reason?: string | null
+        }
+        Update: {
+          action?: string
+          admin_id?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          garage_id?: string
+          id?: string
+          new_status?: string | null
+          old_status?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_audit_log_garage_id_fkey"
+            columns: ["garage_id"]
+            isOneToOne: false
+            referencedRelation: "garages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1112,6 +1338,12 @@ export type Database = {
       generate_predefined_time_slots: {
         Args: { p_garage_id: string }
         Returns: undefined
+      }
+      get_indian_banks: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          bank_name: string
+        }[]
       }
       get_post_comments: {
         Args: { p_post_id: string }
@@ -1206,6 +1438,19 @@ export type Database = {
         | "support_staff"
         | "finance_admin"
         | "state_admin"
+      bank_verification_status: "pending" | "verified" | "rejected"
+      document_type:
+        | "identity_proof"
+        | "garage_photo"
+        | "address_proof"
+        | "business_proof"
+        | "bank_proof"
+      verification_status:
+        | "pending"
+        | "provisional"
+        | "verified"
+        | "certified"
+        | "rejected"
     }
     CompositeTypes: {
       http_header: {
@@ -1355,6 +1600,21 @@ export const Constants = {
         "support_staff",
         "finance_admin",
         "state_admin",
+      ],
+      bank_verification_status: ["pending", "verified", "rejected"],
+      document_type: [
+        "identity_proof",
+        "garage_photo",
+        "address_proof",
+        "business_proof",
+        "bank_proof",
+      ],
+      verification_status: [
+        "pending",
+        "provisional",
+        "verified",
+        "certified",
+        "rejected",
       ],
     },
   },

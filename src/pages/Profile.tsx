@@ -38,6 +38,8 @@ interface Booking {
   booking_date: string;
   booking_time: string;
   status: string;
+  payment_method: string;
+  payment_status: string;
   total_amount: number;
   customer_name: string;
   customer_phone: string;
@@ -1047,6 +1049,33 @@ const Profile = () => {
                               <Badge variant={booking.status === 'confirmed' ? 'default' : 'secondary'}>
                                 {booking.status}
                               </Badge>
+                              
+                              {/* Payment Status Badge */}
+                              <Badge 
+                                variant={
+                                  booking.payment_status === 'paid' ? 'default' : 
+                                  booking.payment_status === 'cash_on_service' ? 'secondary' :
+                                  booking.payment_status === 'failed' ? 'destructive' : 'outline'
+                                }
+                                className={
+                                  booking.payment_status === 'paid' ? 'bg-green-600 hover:bg-green-700' :
+                                  booking.payment_status === 'cash_on_service' ? 'bg-orange-500 hover:bg-orange-600' :
+                                  booking.payment_status === 'pending' ? 'bg-yellow-500 hover:bg-yellow-600 text-white' : ''
+                                }
+                              >
+                                {booking.payment_status === 'paid' ? '✓ Paid Online' :
+                                 booking.payment_status === 'cash_on_service' ? '💵 Cash on Service' :
+                                 booking.payment_status === 'failed' ? '❌ Payment Failed' :
+                                 '⏳ Payment Pending'
+                                }
+                              </Badge>
+                              
+                              <div className="text-xs text-gray-500">
+                                {booking.payment_method === 'cash' ? 'Cash Payment' : 
+                                 booking.payment_method === 'online' ? 'Online Payment' : 
+                                 booking.payment_method || 'Cash Payment'}
+                              </div>
+                              
                               <div className="font-bold text-lg">
                                 ₹{booking.total_amount}
                               </div>

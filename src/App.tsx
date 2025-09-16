@@ -19,6 +19,8 @@ import Revvy from "./pages/Revvy";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import BottomNavigation from "./components/BottomNavigation";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentFailed from "./pages/PaymentFailed";
 
 // Support pages
 import Support from "./pages/Support";
@@ -90,6 +92,10 @@ const App = () => (
               } />
               <Route path="/support/create-ticket" element={<CreateTicket />} />
               <Route path="/support/call-request" element={<CallRequest />} />
+              
+              {/* Payment routes */}
+              <Route path="/payment/success" element={<PaymentSuccess />} />
+              <Route path="/payment/failed" element={<PaymentFailed />} />
               
               {/* Catch all route for 404 */}
               <Route path="*" element={<NotFound />} />
