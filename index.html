@@ -348,6 +348,29 @@
   </head>
 
   <body>
+    <script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyA3165PNbeHhasOQU18DfIT8EJqqd2ZwNw",
+    authDomain: "revonn-01.firebaseapp.com",
+    projectId: "revonn-01",
+    storageBucket: "revonn-01.firebasestorage.app",
+    messagingSenderId: "558915702709",
+    appId: "1:558915702709:web:44c719f9577a2157ec53fc",
+    measurementId: "G-K48W3LXXHF"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+</script>
     <noscript>
       <div style="padding:16px;font-family:Inter,system-ui,-apple-system,sans-serif;">Revonn requires JavaScript to run. Please enable JavaScript in your browser.</div>
     </noscript>
