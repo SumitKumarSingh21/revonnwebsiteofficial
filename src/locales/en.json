@@ -1,0 +1,63 @@
+{
+  "common": {
+    "home": "Home",
+    "profile": "Profile",
+    "support": "Contact Support"
+  },
+  "payments": {
+    "success_title": "Payment Successful!",
+    "success_msg": "Your booking has been confirmed and payment has been processed successfully.",
+    "booking_details": "Booking Details",
+    "service": "Service:",
+    "date_time": "Date & Time:",
+    "vehicle": "Vehicle:",
+    "total_paid": "Total Paid:",
+    "payment_id": "Payment ID:",
+    "whats_next": "What's Next?",
+    "next_points": [
+      "You'll receive a confirmation message shortly",
+      "A mechanic will be assigned to your booking",
+      "We'll contact you before the service date",
+      "Check your booking status in your profile"
+    ],
+    "view_bookings": "View My Bookings",
+    "back_home": "Back to Home",
+    "failed_title": "Payment Failed",
+    "failed_msg": "Your payment could not be processed. Don't worry, your booking is still reserved for 5 minutes.",
+    "reason": "Reason:",
+    "amount": "Amount:",
+    "retry": "Retry Payment",
+    "creating_link": "Creating Payment Link...",
+    "choose_cash": "Choose Cash on Service"
+  },
+  "booking": {
+    "payment_method": "Payment Method",
+    "cash": "Cash on Service",
+    "cash_desc": "Pay directly to the garage at service time",
+    "online": "UPI/Online Payment",
+    "online_desc": "Pay now via UPI, Cards, Net Banking (Powered by Bulkpe)",
+    "redirecting": "Redirecting to Payment...",
+    "booking": "Booking...",
+    "confirm_home": "Confirm Home Service Booking",
+    "confirm_pickup": "Confirm Pickup Booking",
+    "pay_and_confirm": "Pay ₹{{amount}} & Confirm Booking",
+    "secure_note": "🔒 You'll be redirected to a secure payment page powered by Bulkpe",
+    "need_help": "Need help with your booking?"
+  },
+  "settings": {
+    "language": "Language",
+    "select_language": "Select App Language"
+  },
+  "languages": {
+    "en": "English",
+    "hi": "Hindi",
+    "mr": "Marathi",
+    "bn": "Bengali",
+    "ta": "Tamil",
+    "te": "Telugu",
+    "gu": "Gujarati",
+    "kn": "Kannada",
+    "ml": "Malayalam",
+    "pa": "Punjabi"
+  }
+}

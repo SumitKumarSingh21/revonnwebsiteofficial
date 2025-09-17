@@ -97,9 +97,36 @@ serve(async (req) => {
 
     console.log('Payment created successfully:', paymentData);
 
+    // Resolve payment URL from various possible response shapes
+    const candidates = [
+      paymentData?.short_url,
+      paymentData?.payment_url,
+      paymentData?.data?.short_url,
+      paymentData?.data?.payment_url,
+      paymentData?.order?.short_url,
+      paymentData?.order?.payment_url,
+      paymentData?.order?.url,
+      paymentData?.longurl,
+      paymentData?.data?.longurl,
+      paymentData?.link
+    ].filter(Boolean);
+
+    const paymentUrl = candidates.find((u: string) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')));
+
+    if (!paymentUrl) {
+      console.error('No payment URL found in Bulkpe response:', paymentData);
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Missing payment URL in payment gateway response'
+      }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({
       success: true,
-      paymentUrl: paymentData.short_url || paymentData.payment_url,
+      paymentUrl,
       paymentId: paymentData.id || paymentData.order_id,
       paymentData
     }), {

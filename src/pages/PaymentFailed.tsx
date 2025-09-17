@@ -66,8 +66,12 @@ const PaymentFailed = () => {
         throw new Error(paymentResponse?.error || 'Failed to create payment');
       }
 
-      // Redirect to payment URL
-      window.location.href = paymentResponse.paymentUrl;
+      // Redirect to payment URL (validate first)
+      const url = paymentResponse?.paymentUrl as string | undefined;
+      if (!url || typeof url !== 'string' || !/^https?:\/\//.test(url)) {
+        throw new Error('Invalid payment link returned from gateway');
+      }
+      window.location.href = url;
       
     } catch (error: any) {
       console.error('Payment retry failed:', error);
