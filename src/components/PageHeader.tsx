@@ -24,7 +24,7 @@ const PageHeader = ({ title, showBackButton = true, backTo = "/" }: PageHeaderPr
               </Button>
             )}
             <div className="flex items-center space-x-3">
-              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-8 w-8" />
+              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn - India's #1 Vehicle Service Platform Logo" className="h-8 w-8" />
               <div>
                 <h1 className="text-xl font-bold text-red-600">Revonn</h1>
                 <p className="text-xs text-gray-500">Beyond Class</p>

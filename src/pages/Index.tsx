@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Search, MapPin, Star, Clock, Shield, Users, Wrench, Navigation, ChevronRight } from 'lucide-react';
 import { useLocation } from '@/hooks/useLocation';
 import BottomNavigation from '@/components/BottomNavigation';
+import ServiceLinks from '@/components/ServiceLinks';
+import BlogPreview from '@/components/BlogPreview';
 interface Garage {
   id: string;
   name: string;
@@ -77,7 +79,7 @@ const Index = () => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-3">
-              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
+              <img src="/lovable-uploads/5917b996-fa5e-424e-929c-45aab08219a5.png" alt="Revonn - India's #1 Vehicle Service Platform Logo" className="h-8 w-8 sm:h-10 sm:w-10" />
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-primary">Revonn</h1>
                 <p className="text-xs text-muted-foreground hidden sm:block">Beyond Class</p>
@@ -116,7 +118,7 @@ const Index = () => {
             India's #1 <span className="text-primary">Vehicle Service Platform</span> | Car & Bike Service Near Me
           </h1>
           <p className="text-lg sm:text-xl text-muted-foreground max-w-4xl mx-auto">
-            Book trusted doorstep car & bike services across India. Connect with verified mechanics and garages in your city. Professional vehicle repairs, modifications, and maintenance with transparent pricing. Best rates guaranteed!
+            Book trusted <strong>doorstep car & bike services</strong> across India. Connect with verified mechanics and garages in your city. Professional <strong>vehicle repairs, modifications, and maintenance</strong> with transparent pricing. <strong>Best rates guaranteed!</strong>
           </p>
           <div className="flex flex-wrap justify-center gap-2 text-sm text-muted-foreground">
             <span className="bg-accent/50 px-3 py-1 rounded-full">Doorstep Service</span>
@@ -130,7 +132,7 @@ const Index = () => {
         <section className="space-y-4 sm:space-y-6">
           <div className="text-center mb-6">
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Popular Vehicle Services in India</h2>
-            <p className="text-muted-foreground">Professional car and bike services at your doorstep</p>
+            <p className="text-muted-foreground">Professional <strong>car service near me</strong> and <strong>bike servicing online</strong> at your doorstep</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {featuredServices.map((service, index) => (
@@ -149,29 +151,29 @@ const Index = () => {
             ))}
           </div>
           
-          {/* Additional Service Categories */}
+          {/* Additional Service Categories - Enhanced SEO */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
             <div className="text-center p-6 bg-card rounded-lg border">
-              <h3 className="font-semibold text-lg mb-2 text-foreground">Car Services</h3>
-              <p className="text-sm text-muted-foreground">General servicing, oil change, brake repair, AC service, engine diagnostics, battery replacement</p>
+              <h3 className="font-semibold text-lg mb-2 text-foreground">Car Repair & Servicing</h3>
+              <p className="text-sm text-muted-foreground"><strong>Car service near me:</strong> General servicing, oil change service, brake repair, AC repair, engine diagnostics, battery replacement, and car modifications across India</p>
             </div>
             <div className="text-center p-6 bg-card rounded-lg border">
-              <h3 className="font-semibold text-lg mb-2 text-foreground">Bike Services</h3>
-              <p className="text-sm text-muted-foreground">Two-wheeler maintenance, engine repair, brake service, chain lubrication, tire replacement</p>
+              <h3 className="font-semibold text-lg mb-2 text-foreground">Bike Service & Maintenance</h3>
+              <p className="text-sm text-muted-foreground"><strong>Bike servicing near me:</strong> Two-wheeler maintenance, motorcycle repair, scooter service, brake service, chain lubrication, tire replacement, and bike modifications</p>
             </div>
             <div className="text-center p-6 bg-card rounded-lg border">
-              <h3 className="font-semibold text-lg mb-2 text-foreground">Doorstep Service</h3>
-              <p className="text-sm text-muted-foreground">Professional mechanics at your home or office across major cities in India</p>
+              <h3 className="font-semibold text-lg mb-2 text-foreground">Doorstep Vehicle Service</h3>
+              <p className="text-sm text-muted-foreground"><strong>Home service:</strong> Professional mechanics at your doorstep for car & bike repairs, maintenance, and servicing across major cities in India</p>
             </div>
           </div>
         </section>
 
-        {/* Top Rated Garages Section - Horizontal scroll with 4 garages */}
+        {/* Top Rated Garages Section - Enhanced SEO */}
         <section className="space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Top Rated Auto Garages Near You</h2>
-              <p className="text-muted-foreground mt-1">Verified mechanics and service centers across India</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Best Local Garages Near You - Verified Mechanics</h2>
+              <p className="text-muted-foreground mt-1">Top rated <strong>auto repair shops</strong> and <strong>vehicle service centers</strong> with verified mechanics across India</p>
             </div>
             <Button variant="outline" onClick={() => navigate('/services')} className="flex items-center text-primary border-border hover:bg-accent">
               View All <ChevronRight className="ml-2 h-4 w-4" />
@@ -208,7 +210,7 @@ const Index = () => {
                   <div className="relative">
                     <img 
                       src={garage.image_url || "/placeholder.svg"} 
-                      alt={garage.name} 
+                      alt={`${garage.name} - Professional auto repair shop and vehicle service center in ${garage.location} offering car and bike servicing`} 
                       className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" 
                     />
                     <div className="absolute top-3 right-3">
@@ -254,6 +256,12 @@ const Index = () => {
             </div>
           )}
         </section>
+
+        {/* Service Category Links - Internal SEO */}
+        <ServiceLinks />
+
+        {/* Blog Preview for Content Marketing SEO */}
+        <BlogPreview />
 
         {/* FAQ Section for SEO */}
         <section className="space-y-6 bg-card p-6 rounded-lg border">

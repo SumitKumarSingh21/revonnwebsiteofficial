@@ -212,8 +212,8 @@ const Services = () => {
                 
               </div>
               <div className="text-right bg-gradient-to-r from-red-50 to-blue-50 px-4 py-3 rounded-2xl border border-red-100">
-                <h2 className="text-xl font-bold text-gray-900">Vehicle Services</h2>
-                
+                <h1 className="text-xl font-bold text-gray-900">Find Auto Garages Near You</h1>
+                <p className="text-xs text-gray-600">Car & Bike Service Centers</p>
               </div>
             </div>
           </div>
@@ -240,8 +240,8 @@ const Services = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-[17px]">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Available Service Centers</h2>
-            <p className="text-gray-600">Trusted professionals ready to serve you</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Best Auto Repair Shops & Vehicle Service Centers Near You</h2>
+            <p className="text-gray-600">Verified mechanics and <strong>trusted garage booking</strong> for car & bike servicing</p>
           </div>
           <div className="flex items-center text-red-600 bg-red-50 px-4 py-2 rounded-full">
             <MapPin className="h-4 w-4 mr-2" />
@@ -253,7 +253,7 @@ const Services = () => {
             {filteredGarages.map(garage => <Card key={garage.id} className="overflow-hidden hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer group border-0 bg-white/90 backdrop-blur-md rounded-3xl">
                 <div className="relative">
                   <div className="aspect-[16/9] bg-gradient-to-br from-red-100 via-red-200 to-orange-200 flex items-center justify-center relative overflow-hidden">
-                    {garage.image_url ? <img src={garage.image_url} alt={garage.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="text-6xl opacity-60 group-hover:scale-110 transition-transform duration-500">🏢</div>}
+                    {garage.image_url ? <img src={garage.image_url || "/placeholder.svg"} alt={`${garage.name} - Auto service center and garage in ${garage.location} for car and bike repairs`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" /> : <div className="text-6xl opacity-60 group-hover:scale-110 transition-transform duration-500">🏢</div>}
                     {/* Enhanced overlay gradients */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent group-hover:from-black/20 transition-all duration-300"></div>
                     

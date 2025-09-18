@@ -327,7 +327,11 @@ const BookingPage = () => {
                   <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
                     <div className="relative group">
                       <div className="w-32 h-32 md:w-36 md:h-36 rounded-3xl overflow-hidden border-4 border-white/30 shadow-2xl group-hover:shadow-3xl transition-all duration-300 bg-white/10 backdrop-blur-sm">
-                        <img src={garage.image_url || "/placeholder.svg"} alt={garage.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <img 
+                        src={garage.image_url || "/placeholder.svg"} 
+                        alt={`${garage.name} - Professional auto repair and vehicle service center offering comprehensive car and bike servicing in ${garage.location}`} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                      />
                       </div>
                       <div className="absolute -top-3 -right-3 bg-gradient-to-r from-green-400 to-green-600 text-white text-xs px-3 py-2 rounded-full font-bold shadow-xl transform rotate-12 hover:rotate-0 transition-transform duration-300">
                         ✓ VERIFIED

@@ -10,6 +10,7 @@ import NotificationManager from "@/components/NotificationManager";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Services from "./pages/Services";
+import ServiceLanding from "./pages/ServiceLanding";
 import BookingPage from "./pages/BookingPage";
 import Community from "./pages/Community";
 import Profile from "./pages/Profile";
@@ -42,6 +43,13 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
+              
+              {/* SEO-friendly service landing pages */}
+              <Route path="/car-service" element={<ServiceLanding />} />
+              <Route path="/bike-service" element={<ServiceLanding />} />
+              <Route path="/doorstep-service" element={<ServiceLanding />} />
+              <Route path="/car-modifications" element={<ServiceLanding />} />
+              
               <Route path="/services" element={
                 <ProtectedRoute>
                   <Services />
@@ -94,8 +102,8 @@ const App = () => (
               <Route path="/support/call-request" element={<CallRequest />} />
               
               {/* Payment routes */}
-              <Route path="/payment/success" element={<PaymentSuccess />} />
-              <Route path="/payment/failed" element={<PaymentFailed />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-failed" element={<PaymentFailed />} />
               
               {/* Catch all route for 404 */}
               <Route path="*" element={<NotFound />} />
