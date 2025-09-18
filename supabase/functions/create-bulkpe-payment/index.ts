@@ -66,14 +66,33 @@ serve(async (req) => {
       body: JSON.stringify(paymentPayload),
     });
 
-    const responseText = await bulkpeResponse.text();
-    console.log('Bulkpe response:', responseText);
+    let responseText: string | undefined;
+    let paymentData: any = null;
 
-    if (!bulkpeResponse.ok) {
-      throw new Error(`Bulkpe API error: ${responseText}`);
+    try {
+      responseText = await bulkpeResponse.text();
+      console.log('Bulkpe response:', responseText);
+      paymentData = responseText ? JSON.parse(responseText) : null;
+    } catch (e) {
+      console.error('Failed to parse Bulkpe response');
     }
 
-    const paymentData = JSON.parse(responseText);
+    if (!bulkpeResponse.ok || paymentData?.status === false) {
+      const message = paymentData?.message || `BulkPe API error (${bulkpeResponse.status})`;
+      console.error('BulkPe API returned error:', message);
+      return new Response(JSON.stringify({
+        success: false,
+        error: message,
+        code: bulkpeResponse.status,
+      }), {
+        status: bulkpeResponse.status || 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Parsed response JSON
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // Keep paymentData as any for flexibility
 
     // Update booking with payment reference
     const { error: updateError } = await supabase

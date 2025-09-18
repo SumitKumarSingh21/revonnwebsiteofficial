@@ -77,7 +77,7 @@ const PaymentFailed = () => {
       console.error('Payment retry failed:', error);
       toast({
         title: "Retry Failed",
-        description: "Failed to create new payment link. Please try again later.",
+        description: (error?.message || error?.error || 'Failed to create new payment link.') + ' If this persists, please contact support.',
         variant: "destructive"
       });
       setRetrying(false);
