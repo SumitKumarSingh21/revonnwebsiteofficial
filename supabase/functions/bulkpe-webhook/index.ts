@@ -27,18 +27,30 @@ serve(async (req) => {
     const paymentId = webhookData.id || webhookData.order_id;
     const paymentStatus = webhookData.status;
     const receipt = webhookData.receipt;
+    const reference_id = webhookData.reference_id; // New field for updated API
 
-    if (!paymentId || !paymentStatus) {
-      console.error('Missing payment ID or status in webhook');
+    if (!paymentId && !reference_id) {
+      console.error('Missing payment ID or reference ID in webhook');
       return new Response('Missing required fields', { status: 400 });
     }
 
-    // Extract booking ID from receipt (format: booking_<uuid>)
-    const bookingId = receipt?.replace('booking_', '');
+    // Extract booking ID from reference_id (format: bookingId_timestamp) or receipt (format: booking_bookingId)
+    let bookingId;
+    let paymentReference;
+
+    if (reference_id) {
+      // New format: bookingId_timestamp
+      bookingId = reference_id.split('_')[0];
+      paymentReference = reference_id;
+    } else if (receipt) {
+      // Legacy format: booking_bookingId
+      bookingId = receipt.replace('booking_', '');
+      paymentReference = paymentId;
+    }
     
     if (!bookingId) {
-      console.error('Invalid receipt format:', receipt);
-      return new Response('Invalid receipt format', { status: 400 });
+      console.error('Invalid reference format. Receipt:', receipt, 'Reference ID:', reference_id);
+      return new Response('Invalid reference format', { status: 400 });
     }
 
     console.log('Processing payment webhook for booking:', bookingId, 'status:', paymentStatus);
@@ -67,7 +79,7 @@ serve(async (req) => {
         payment_gateway_response: webhookData
       })
       .eq('id', bookingId)
-      .eq('payment_reference', paymentId)
+      .eq('payment_reference', paymentReference)
       .select()
       .single();
 

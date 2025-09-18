@@ -41,31 +41,26 @@ serve(async (req) => {
       throw new Error('Booking not found');
     }
 
-    // Create payment with Bulkpe
+    // Create unique reference ID combining booking ID and timestamp
+    const referenceId = `${bookingId}_${Date.now()}`;
+    
+    // Create payment with Bulkpe using the specified API
     const paymentPayload = {
-      amount: amount * 100, // Convert to paise (Bulkpe expects amount in paise)
-      currency: 'INR',
-      receipt: `booking_${bookingId}`,
-      customer: {
-        name: customerName,
-        email: customerEmail,
-        phone: customerPhone
-      },
-      notify: {
-        sms: true,
-        email: true
-      },
-      reminder_enable: true,
-      callback_url: `${supabaseUrl}/functions/v1/bulkpe-webhook`,
-      callback_method: 'POST'
+      reference_id: referenceId,
+      amount: amount, // Use amount as-is (no conversion to paise for this API)
+      name: customerName,
+      phone: customerPhone,
+      email: customerEmail,
+      success_url: 'https://revonn.com/payment-success',
+      failure_url: 'https://revonn.com/payment-failed'
     };
 
     console.log('Sending payment request to Bulkpe:', paymentPayload);
 
-    const bulkpeResponse = await fetch('https://api.bulkpe.in/v1/order/create', {
+    const bulkpeResponse = await fetch('https://api.bulkpe.in/client/createPGCollection', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${bulkpeApiKey}`,
+        'x-api-key': bulkpeApiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(paymentPayload),
@@ -84,7 +79,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from('bookings')
       .update({
-        payment_reference: paymentData.id || paymentData.order_id,
+        payment_reference: referenceId,
         payment_status: 'pending',
         payment_gateway_response: paymentData
       })
@@ -97,27 +92,14 @@ serve(async (req) => {
 
     console.log('Payment created successfully:', paymentData);
 
-    // Resolve payment URL from various possible response shapes
-    const candidates = [
-      paymentData?.short_url,
-      paymentData?.payment_url,
-      paymentData?.data?.short_url,
-      paymentData?.data?.payment_url,
-      paymentData?.order?.short_url,
-      paymentData?.order?.payment_url,
-      paymentData?.order?.url,
-      paymentData?.longurl,
-      paymentData?.data?.longurl,
-      paymentData?.link
-    ].filter(Boolean);
+    // Get redirect URL from response (result.redirectUrl as specified)
+    const paymentUrl = paymentData?.result?.redirectUrl;
 
-    const paymentUrl = candidates.find((u: string) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')));
-
-    if (!paymentUrl) {
-      console.error('No payment URL found in Bulkpe response:', paymentData);
+    if (!paymentUrl || typeof paymentUrl !== 'string' || !/^https?:\/\//.test(paymentUrl)) {
+      console.error('No valid redirect URL found in Bulkpe response:', paymentData);
       return new Response(JSON.stringify({
         success: false,
-        error: 'Missing payment URL in payment gateway response'
+        error: 'Missing or invalid payment redirect URL in gateway response'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -127,7 +109,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       success: true,
       paymentUrl,
-      paymentId: paymentData.id || paymentData.order_id,
+      referenceId,
       paymentData
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
